@@ -36,6 +36,7 @@ psycopg2-binary==2.9.11
 PyJWT==2.10.1
 PyMySQL==1.1.2
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
 python-magic
 rarfile==4.2
 redis==5.0.1
@@ -48,3 +49,4 @@ urllib3==2.5.0
 vine==5.1.0
 wcwidth==0.2.13
 setuptools
+
