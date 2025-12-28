@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FaStar, FaCheck, FaImage, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
 import { ProxyImage } from '@/components/ProxyImage';
+import { BannerCardSkeleton } from '@/components/DashboardSkeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const MAX_FEATURED = 5;
@@ -21,29 +22,45 @@ interface Manga {
 export default function BannersPage() {
     const [mangaList, setMangaList] = useState<Manga[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [saving, setSaving] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+    const PAGE_SIZE = 20;
+
     useEffect(() => {
         fetchManga();
-    }, []);
+    }, [currentPage]);
 
     async function fetchManga() {
         try {
-            const res = await fetch(`${API_URL}/manga/`);
+            const res = await fetch(`${API_URL}/manga/?page=${currentPage}&page_size=${PAGE_SIZE}`);
             if (res.ok) {
                 const data = await res.json();
                 const mangaArray = Array.isArray(data) ? data : data.results || [];
                 // Filter only manga with banners
                 const withBanners = mangaArray.filter((m: Manga) => m.has_banner || m.banner_image_url);
-                setMangaList(withBanners);
+                setMangaList(prev => currentPage === 1 ? withBanners : [...prev, ...withBanners]);
+                setTotalCount(data.count || withBanners.length);
+                setHasMore(data.next !== null);
             }
         } catch (error) {
             console.error('Error fetching manga:', error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     }
+
+    const loadMore = async () => {
+        if (!hasMore || loadingMore) return;
+        setLoadingMore(true);
+        setCurrentPage(prev => prev + 1);
+    };
 
     const featuredCount = mangaList.filter(m => m.is_featured).length;
 
@@ -83,8 +100,16 @@ export default function BannersPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div>
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">إدارة البنرات</h1>
+                        <p className="text-gray-400 mt-1">اختر المانجا التي ستظهر في البنر الرئيسي للموقع</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <BannerCardSkeleton count={6} />
+                </div>
             </div>
         );
     }
@@ -184,6 +209,33 @@ export default function BannersPage() {
                     <li>• لإضافة صورة بنر، اذهب لصفحة تعديل المانجا وارفع صورة البنر</li>
                 </ul>
             </div>
+
+            {/* Load More Button */}
+            {hasMore && mangaList.length > 0 && (
+                <div className="flex justify-center mt-8">
+                    <button
+                        onClick={loadMore}
+                        disabled={loadingMore}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50"
+                    >
+                        {loadingMore ? (
+                            <span className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                جاري التحميل...
+                            </span>
+                        ) : (
+                            `عرض المزيد`
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Loading More Skeleton */}
+            {loadingMore && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                    <BannerCardSkeleton count={3} />
+                </div>
+            )}
         </div>
     );
 }

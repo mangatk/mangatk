@@ -629,7 +629,10 @@ class TranslationJob(models.Model):
     temp_extracted_path = models.CharField(max_length=500, blank=True)
     output_file_path = models.CharField(max_length=500, blank=True, help_text="مسار ملف CBZ المترجم")
     
-    # نتائج الترجمة (JSON: [{original_path, translated_url, page_number}])
+    # مسارات الصور الأصلية للمعاينة (JSON: [{page_number, local_path, filename}])
+    original_images_paths = models.JSONField(default=list, blank=True, help_text="مسارات الصور الأصلية المؤقتة")
+    
+    # نتائج الترجمة (JSON: [{page_number, local_path, filename}])
     translation_results = models.JSONField(default=list, blank=True)
     
     # إحصائيات

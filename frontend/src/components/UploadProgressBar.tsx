@@ -3,7 +3,7 @@ import React from 'react';
 interface UploadProgressBarProps {
     current: number;
     total: number;
-    status?: 'idle' | 'uploading' | 'success' | 'error';
+    status?: 'idle' | 'uploading' | 'processing' | 'success' | 'error';
     fileName?: string;
     error?: string;
 }
@@ -20,6 +20,7 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
     const getStatusColor = () => {
         switch (status) {
             case 'uploading':
+            case 'processing':
                 return 'bg-blue-600';
             case 'success':
                 return 'bg-green-600';
@@ -34,6 +35,8 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
         switch (status) {
             case 'uploading':
                 return `جاري الرفع... ${current} من ${total} صورة`;
+            case 'processing':
+                return `جاري معالجة ورفع الصور إلى ImgBB...`;
             case 'success':
                 return `✓ تم رفع ${total} صورة بنجاح`;
             case 'error':
@@ -81,17 +84,18 @@ export const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div
-                    className={`h-full ${getStatusColor()} transition-all duration-300 ease-out rounded-full relative overflow-hidden`}
-                    style={{ width: `${percentage}%` }}
+                    className={`h-full ${getStatusColor()} transition-all duration-300 ease-out rounded-full relative overflow-hidden ${status === 'processing' ? 'w-full' : ''
+                        }`}
+                    style={status === 'processing' ? undefined : { width: `${percentage}%` }}
                 >
-                    {status === 'uploading' && (
+                    {(status === 'uploading' || status === 'processing') && (
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
                     )}
                 </div>
             </div>
 
             {/* File name or error message */}
-            {fileName && status === 'uploading' && (
+            {fileName && (status === 'uploading' || status === 'processing') && (
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 truncate">
                     📄 {fileName}
                 </p>

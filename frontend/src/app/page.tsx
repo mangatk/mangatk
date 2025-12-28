@@ -11,6 +11,7 @@ import { ComicGrid } from '@/components/ComicGrid';
 import { SectionTitle } from '@/components/SectionTitle';
 import { CTASection } from '@/components/CTASection';
 import { Footer } from '@/components/Footer';
+import { ProxyImage } from '@/components/ProxyImage';
 import { getMangaList, getMangaByCategory } from '@/services/api';
 import { Manga } from '@/types/manga';
 import { useStorage } from '@/hooks/useStorage';
@@ -55,8 +56,14 @@ export default function Home() {
   const [featuredManga, setFeaturedManga] = useState<Manga[]>([]);
   const [filteredManga, setFilteredManga] = useState<Manga[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [currentFilters, setCurrentFilters] = useState<Filters>({});
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Category manga (loaded separately)
   const [categorizedManga, setCategorizedManga] = useState<{
@@ -75,10 +82,13 @@ export default function Home() {
       try {
         setLoading(true);
 
-        // 1. Fetch all manga
-        const data = await getMangaList();
-        setAllManga(data);
-        setFilteredManga(data);
+        // 1. Fetch first page of manga (20 items)
+        const response = await getMangaList(1, 20);
+        setAllManga(response.results);
+        setFilteredManga(response.results);
+        setTotalCount(response.count);
+        setHasMore(response.next !== null);
+        setCurrentPage(1);
 
         // 2. Fetch featured manga (for carousel) - USE CORRECT ENDPOINT
         try {
@@ -106,28 +116,16 @@ export default function Home() {
             })));
           } else {
             // If request fails, use fallback
-            setFeaturedManga(data.slice(0, 5));
+            setFeaturedManga(response.results.slice(0, 5));
           }
         } catch (err) {
           console.error('Error fetching featured manga:', err);
           // Fallback to first 5 manga if featured fetch fails
-          setFeaturedManga(data.slice(0, 5));
+          setFeaturedManga(response.results.slice(0, 5));
         }
 
-        // 3. Fetch categorized manga
-        const bestWebtoon = await getMangaByCategory('best-webtoon');
-        const goldenWeek = await getMangaByCategory('golden-week');
-        const newReleases = await getMangaByCategory('new-releases');
-        const actionFantasy = await getMangaByCategory('action-fantasy');
-        const romanceDrama = await getMangaByCategory('romance-drama');
-
-        setCategorizedManga({
-          'best-webtoon': bestWebtoon,
-          'golden-week': goldenWeek,
-          'new-releases': newReleases,
-          'action-fantasy': actionFantasy,
-          'romance-drama': romanceDrama
-        });
+        // Load categorized manga in background (don't block initial load)
+        loadCategorizedManga();
 
       } catch (error) {
         console.error('Error loading manga:', error);
@@ -144,6 +142,47 @@ export default function Home() {
     else if (hour < 18) setGreeting('طاب مساؤك 🌤️');
     else setGreeting('سهرة ممتعة 🌙');
   }, []);
+
+  // Load categorized manga separately to not block initial load
+  async function loadCategorizedManga() {
+    try {
+      const bestWebtoon = await getMangaByCategory('best-webtoon');
+      const goldenWeek = await getMangaByCategory('golden-week');
+      const newReleases = await getMangaByCategory('new-releases');
+      const actionFantasy = await getMangaByCategory('action-fantasy');
+      const romanceDrama = await getMangaByCategory('romance-drama');
+
+      setCategorizedManga({
+        'best-webtoon': bestWebtoon,
+        'golden-week': goldenWeek,
+        'new-releases': newReleases,
+        'action-fantasy': actionFantasy,
+        'romance-drama': romanceDrama
+      });
+    } catch (error) {
+      console.error('Error loading categorized manga:', error);
+    }
+  }
+
+  // Load more manga
+  const loadMoreManga = async () => {
+    if (!hasMore || loadingMore) return;
+
+    try {
+      setLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const response = await getMangaList(nextPage, 20);
+
+      setAllManga(prev => [...prev, ...response.results]);
+      setFilteredManga(prev => [...prev, ...response.results]);
+      setCurrentPage(nextPage);
+      setHasMore(response.next !== null);
+    } catch (error) {
+      console.error('Error loading more manga:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Filtering logic
   useEffect(() => {
@@ -226,7 +265,11 @@ export default function Home() {
                 {history.slice(1, 6).map((item, idx) => (
                   <Link key={idx} href={`/read/${item.chapterId}?mangaId=${item.mangaId}`} className="flex-shrink-0 w-48 group">
                     <div className="aspect-[2/3] rounded-lg overflow-hidden relative mb-2">
-                      <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <ProxyImage
+                        src={item.imageUrl}
+                        alt={item.mangaTitle}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <FaPlay className="text-white text-2xl" />
                       </div>
@@ -338,7 +381,33 @@ export default function Home() {
           </>
         )}
 
+        {/* CTAs للتواصل */}
         <CTASection />
+
+        {/* Load More Button */}
+        {!loading && hasMore && (
+          <div className="flex justify-center my-12">
+            <button
+              onClick={loadMoreManga}
+              disabled={loadingMore}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingMore ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  جاري التحميل...
+                </span>
+              ) : (
+                `تحميل المزيد (${totalCount - allManga.length} متبقية)`
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Footer Footer */}
         <Footer />
       </div>
     </main>

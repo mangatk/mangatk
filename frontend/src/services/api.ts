@@ -67,9 +67,20 @@ function mapMangaData(item: any): Manga {
 
 // ==================== Manga Endpoints ====================
 
-export async function getMangaList(filters?: FilterState): Promise<Manga[]> {
+interface PaginatedResponse<T> {
+  results: T[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
+export async function getMangaList(page: number = 1, pageSize: number = 20, filters?: FilterState): Promise<PaginatedResponse<Manga>> {
   let endpoint = '/manga/';
   const params = new URLSearchParams();
+
+  // Add pagination params
+  params.append('page', page.toString());
+  params.append('page_size', pageSize.toString());
 
   if (filters?.query) params.append('search', filters.query);
 
@@ -79,7 +90,6 @@ export async function getMangaList(filters?: FilterState): Promise<Manga[]> {
 
   // دعم تصفية الأنواع (Genres)
   if (filters?.categories && filters.categories.length > 0) {
-    // نفترض أن الباك-إند يستقبل مصفوفة أو قيم متعددة، هنا نرسل القيم بشكل متكرر
     filters.categories.forEach(cat => params.append('genre', cat));
   }
 
@@ -98,10 +108,25 @@ export async function getMangaList(filters?: FilterState): Promise<Manga[]> {
 
   const data = await fetchAPI<any>(endpoint);
 
-  // استخدام الدالة المساعدة لاستخراج النتائج
-  const results = extractResults(data);
+  // Handle response - either paginated or array
+  if (data.results) {
+    // Paginated response
+    return {
+      results: data.results.map(mapMangaData),
+      count: data.count || 0,
+      next: data.next || null,
+      previous: data.previous || null
+    };
+  }
 
-  return results.map(mapMangaData);
+  // Non-paginated fallback (array response)
+  const results = extractResults(data);
+  return {
+    results: results.map(mapMangaData),
+    count: results.length,
+    next: null,
+    previous: null
+  };
 }
 
 export async function getMangaById(id: string): Promise<Manga & { chapters: Chapter[] }> {

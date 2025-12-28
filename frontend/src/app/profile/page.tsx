@@ -7,6 +7,7 @@ import { useStorage } from '@/hooks/useStorage';
 import { formatReadingTime } from '@/hooks/useReadingTime';
 import { useAchievements } from '@/hooks/useAchievements';
 import { ALL_ACHIEVEMENTS, Achievement, RARITY_COLORS } from '@/data/achievements';
+import { ProxyImage } from '@/components/ProxyImage';
 import {
    FaUser, FaHeart, FaHistory, FaSignOutAlt, FaClock,
    FaBook, FaDownload, FaCommentDots, FaReply, FaCheck, FaTrophy, FaLock
@@ -422,7 +423,11 @@ export default function ProfilePage() {
                                        }`}>
                                        {isUnlocked ? (
                                           ach.icon_url ? (
-                                             <img src={ach.icon_url} alt={achTitle} className="w-6 h-6" />
+                                             <ProxyImage
+                                                src={ach.icon_url}
+                                                alt={achTitle}
+                                                className="w-6 h-6"
+                                             />
                                           ) : localAch?.icon ? (
                                              <localAch.icon />
                                           ) : (

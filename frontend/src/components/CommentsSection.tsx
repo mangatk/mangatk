@@ -1,96 +1,58 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaPaperPlane, FaUserCircle, FaThumbsUp, FaThumbsDown, FaReply, FaEdit, FaTrash, FaTimes, FaCheck } from 'react-icons/fa';
-import { getAchievementById, RARITY_COLORS } from '@/data/achievements';
+import { FaPaperPlane, FaUserCircle, FaThumbsUp, FaReply, FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 import { useAuth } from '@/context/AuthContext';
+import { ProxyImage } from '@/components/ProxyImage';
+import * as commentsAPI from '@/services/comments';
+import type { Comment } from '@/services/comments';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-interface Comment {
-  id: string | number;
-  user: string;
-  avatar?: string;
-  text: string;
-  time: string;
-  votes: number;
-  isNew?: boolean;
-  userVote?: 'up' | 'down' | null;
-  replies: Comment[];
+// 1. تعريف واجهة الـ Props للمكون الفرعي
+interface CommentItemProps {
+  comment: Comment;
+  level?: number;
+  isAuthenticated: boolean;
+  currentUser: any;
+  replyingTo: string | null;
+  setReplyingTo: (id: string | null) => void;
+  replyText: string;
+  setReplyText: (text: string) => void;
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  editText: string;
+  setEditText: (text: string) => void;
+  submitting: boolean;
+  onReply: (parentId: string) => void;
+  onEdit: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
+  onLike: (commentId: string) => void;
 }
 
-export function CommentsSection({ chapterId, mangaId }: { chapterId: string; mangaId?: string }) {
-  const { isAuthenticated, getAuthHeaders, user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [activeReplyId, setActiveReplyId] = useState<string | number | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [myEquippedTitle, setMyEquippedTitle] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | number | null>(null);
-  const [editText, setEditText] = useState('');
+// 2. إخراج المكون ليكون مستقلاً (خارج CommentsSection)
+function CommentItem({
+  comment,
+  level = 0,
+  isAuthenticated,
+  currentUser,
+  replyingTo,
+  setReplyingTo,
+  replyText,
+  setReplyText,
+  editingId,
+  setEditingId,
+  editText,
+  setEditText,
+  submitting,
+  onReply,
+  onEdit,
+  onDelete,
+  onLike
+}: CommentItemProps) {
+  const isOwner = isAuthenticated && currentUser?.name === comment.user_name;
+  const indentClass = level > 0 ? 'mr-8' : '';
 
-  useEffect(() => {
-    loadComments();
-    // استخدام اللقب من السياق أولاً، ثم localStorage كنسخة احتياطية
-    if (user?.equipped_title) {
-      setMyEquippedTitle(user.equipped_title);
-    } else {
-      const titleId = localStorage.getItem('equipped_title');
-      setMyEquippedTitle(titleId);
-    }
-  }, [chapterId, isAuthenticated, user]);
-
-  const loadComments = async () => {
-    setIsLoading(true);
-
-    if (isAuthenticated) {
-      // Load from API
-      try {
-        const res = await fetch(`${API_URL}/comments/?chapter=${chapterId}`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const apiComments = (Array.isArray(data) ? data : data.results || []).map((c: any) => ({
-            id: c.id,
-            user: c.user_name || 'مجهول',
-            avatar: c.user_avatar,
-            text: c.content,
-            time: formatTime(c.created_at),
-            votes: c.likes_count || 0,
-            replies: (c.replies || []).map((r: any) => ({
-              id: r.id,
-              user: r.user_name || 'مجهول',
-              text: r.content,
-              time: formatTime(r.created_at),
-              votes: r.likes_count || 0,
-              replies: []
-            }))
-          }));
-          setComments(apiComments);
-        }
-      } catch (e) {
-        console.error("Error loading comments from API", e);
-        loadFromLocal();
-      }
-    } else {
-      loadFromLocal();
-    }
-    setIsLoading(false);
-  };
-
-  const loadFromLocal = () => {
-    const localKey = `comments_${chapterId}`;
-    const saved = localStorage.getItem(localKey);
-    const localComments = saved ? JSON.parse(saved) : [];
-    setComments(localComments.map((c: any) => ({
-      ...c,
-      replies: c.replies || []
-    })));
-  };
-
-  const formatTime = (dateStr: string) => {
+  // دالة لتنسيق الوقت (نقلناها هنا أو يمكن تركها دالة مساعدة عامة)
+  function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -99,391 +61,439 @@ export function CommentsSection({ chapterId, mangaId }: { chapterId: string; man
     if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
     if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
     return `منذ ${Math.floor(diff / 86400)} يوم`;
-  };
+  }
 
-  const saveToLocal = (updatedList: Comment[]) => {
-    setComments(updatedList);
-    const localKey = `comments_${chapterId}`;
-    localStorage.setItem(localKey, JSON.stringify(updatedList));
-  };
-
-  const handleVote = async (commentId: string | number, type: 'up' | 'down') => {
-    if (isAuthenticated) {
-      try {
-        await fetch(`${API_URL}/comments/${commentId}/like/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          },
-        });
-        loadComments(); // Reload to get updated likes
-      } catch (e) {
-        console.error("Error liking comment", e);
-      }
-    } else {
-      // Local vote handling
-      const updateVoteForList = (list: Comment[]): Comment[] => {
-        return list.map(comment => {
-          if (comment.id === commentId) {
-            let newVotes = comment.votes;
-            let newStatus = comment.userVote;
-
-            if (newStatus === type) {
-              newVotes -= (type === 'up' ? 1 : -1);
-              newStatus = null;
-            } else {
-              if (newStatus === 'up' && type === 'down') newVotes -= 2;
-              else if (newStatus === 'down' && type === 'up') newVotes += 2;
-              else newVotes += (type === 'up' ? 1 : -1);
-              newStatus = type;
-            }
-            return { ...comment, votes: newVotes, userVote: newStatus };
-          }
-
-          if (comment.replies.length > 0) {
-            return { ...comment, replies: updateVoteForList(comment.replies) };
-          }
-          return comment;
-        });
-      };
-      saveToLocal(updateVoteForList(comments));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    if (isAuthenticated) {
-      try {
-        const res = await fetch(`${API_URL}/comments/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          },
-          body: JSON.stringify({
-            chapter_id: chapterId,
-            manga_id: mangaId || null,
-            content: newComment,
-          }),
-        });
-        if (res.ok) {
-          setNewComment('');
-          loadComments();
-        } else {
-          const errorData = await res.json().catch(() => ({}));
-          console.error("Comment post failed:", res.status, errorData);
-          alert(`فشل إرسال التعليق: ${errorData.detail || errorData.content || JSON.stringify(errorData)}`);
-        }
-      } catch (e) {
-        console.error("Error posting comment", e);
-        alert(`خطأ في الاتصال: ${e}`);
-      }
-    } else {
-      // Save locally for guests
-      const comment: Comment = {
-        id: Date.now(),
-        user: "أنت",
-        text: newComment,
-        time: "الآن",
-        votes: 0,
-        isNew: true,
-        replies: []
-      };
-      saveToLocal([comment, ...comments]);
-      setNewComment('');
-    }
-  };
-
-  const submitReply = async (parentId: string | number) => {
-    if (!replyText.trim()) return;
-
-    if (isAuthenticated) {
-      try {
-        const res = await fetch(`${API_URL}/comments/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          },
-          body: JSON.stringify({
-            chapter_id: chapterId,
-            manga_id: mangaId,
-            content: replyText,
-            parent: parentId,
-          }),
-        });
-        if (res.ok) {
-          setReplyText('');
-          setActiveReplyId(null);
-          loadComments();
-        }
-      } catch (e) {
-        console.error("Error posting reply", e);
-      }
-    } else {
-      const newReply: Comment = {
-        id: Date.now(),
-        user: "أنت",
-        text: replyText,
-        time: "الآن",
-        votes: 0,
-        isNew: true,
-        replies: []
-      };
-
-      const updatedComments = comments.map(c => {
-        if (c.id === parentId) {
-          return { ...c, replies: [...c.replies, newReply] };
-        }
-        return c;
-      });
-
-      saveToLocal(updatedComments);
-      setActiveReplyId(null);
-      setReplyText('');
-    }
-  };
-
-  const handleEdit = async (commentId: string | number, newContent: string) => {
-    if (!newContent.trim()) return;
-
-    if (isAuthenticated) {
-      try {
-        const res = await fetch(`${API_URL}/comments/${commentId}/`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          },
-          body: JSON.stringify({ content: newContent }),
-        });
-        if (res.ok) {
-          setEditingId(null);
-          setEditText('');
-          loadComments();
-        }
-      } catch (e) {
-        console.error("Error editing comment", e);
-      }
-    } else {
-      // Local edit
-      const updateText = (list: Comment[]): Comment[] => {
-        return list.map(c => {
-          if (c.id === commentId) return { ...c, text: newContent };
-          return { ...c, replies: updateText(c.replies) };
-        });
-      };
-      saveToLocal(updateText(comments));
-      setEditingId(null);
-      setEditText('');
-    }
-  };
-
-  const handleDelete = async (commentId: string | number) => {
-    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
-
-    if (isAuthenticated) {
-      try {
-        const res = await fetch(`${API_URL}/comments/${commentId}/`, {
-          method: 'DELETE',
-          headers: { ...getAuthHeaders() },
-        });
-        if (res.ok) {
-          loadComments();
-        }
-      } catch (e) {
-        console.error("Error deleting comment", e);
-      }
-    } else {
-      // Local delete
-      const removeComment = (list: Comment[]): Comment[] => {
-        return list.filter(c => c.id !== commentId).map(c => ({
-          ...c,
-          replies: removeComment(c.replies)
-        }));
-      };
-      saveToLocal(removeComment(comments));
-    }
-  };
-
-  const sortedComments = [...comments].sort((a, b) => b.votes - a.votes);
-
-  const CommentItem = ({ data, isReply = false, parentId }: { data: Comment, isReply?: boolean, parentId?: string | number }) => {
-    let displayTitle = null;
-    if (data.user === 'أنت' && myEquippedTitle) {
-      displayTitle = getAchievementById(myEquippedTitle);
-    }
-
-    return (
-      <div className={`flex gap-3 md:gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${isReply ? 'mr-12 mt-3 p-3 bg-gray-800/30 rounded-lg border-r-2 border-gray-700' : 'p-4 bg-blue-900/5 rounded-xl border border-gray-800'}`}>
-
-        <div className="flex-shrink-0">
-          {data.avatar ? (
-            <img src={data.avatar} alt={data.user} className={`rounded-full ${isReply ? 'w-8 h-8' : 'w-10 h-10'}`} />
-          ) : data.isNew || data.user === user?.name ? (
-            <div className={`rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg ${isReply ? 'w-8 h-8 text-xs' : 'w-10 h-10'}`}>أ</div>
+  return (
+    <div className={`${indentClass} mb-4`}>
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
+          {comment.user_avatar ? (
+            <ProxyImage
+              src={comment.user_avatar}
+              alt={comment.user_name}
+              className="w-10 h-10 rounded-full"
+            />
           ) : (
-            <FaUserCircle className={`text-gray-600 ${isReply ? 'text-3xl' : 'text-4xl'}`} />
+            <FaUserCircle className="w-10 h-10 text-gray-500" />
           )}
-        </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex flex-col">
-              <h4 className={`font-bold truncate ${data.isNew || data.user === user?.name ? 'text-blue-400' : 'text-gray-300'} ${isReply ? 'text-sm' : 'text-base'}`}>
-                {data.user}
-              </h4>
-
-              {displayTitle && (
-                <span className={`text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r ${RARITY_COLORS[displayTitle.rarity]} bg-clip-text text-transparent w-fit -mt-0.5`}>
-                  {displayTitle.title}
-                </span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white">{comment.user_name}</span>
+              <span className="text-gray-500 text-sm">{formatTime(comment.created_at)}</span>
+              {comment.is_edited && (
+                <span className="text-gray-500 text-xs">(معدّل)</span>
               )}
             </div>
-            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{data.time}</span>
           </div>
+        </div>
 
-          <p className={`text-gray-400 leading-relaxed mb-3 break-words ${isReply ? 'text-xs' : 'text-sm'}`}>{data.text}</p>
-
-          {/* Edit Mode */}
-          {editingId === data.id ? (
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
-                autoFocus
-              />
-              <button onClick={() => handleEdit(data.id, editText)} className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"><FaCheck /></button>
-              <button onClick={() => { setEditingId(null); setEditText(''); }} className="p-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"><FaTimes /></button>
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => handleVote(data.id, 'up')}
-              className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${data.userVote === 'up' ? 'text-green-400' : 'text-gray-500 hover:text-green-400'}`}
-            >
-              <FaThumbsUp />
-              <span>{data.votes}</span>
-            </button>
-
-            <button
-              onClick={() => handleVote(data.id, 'down')}
-              className={`flex items-center gap-1 text-xs transition-colors ${data.userVote === 'down' ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-            >
-              <FaThumbsDown />
-            </button>
-
-            {!isReply && (
+        {/* Content or Edit Mode */}
+        {editingId === comment.id ? (
+          <div className="mb-3">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none min-h-[80px] resize-none"
+              placeholder="عدّل تعليقك..."
+              autoFocus
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => onEdit(comment.id)}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2"
+              >
+                <FaCheck /> حفظ
+              </button>
               <button
                 onClick={() => {
-                  setActiveReplyId(activeReplyId === data.id ? null : data.id);
-                  setReplyText('');
+                  setEditingId(null);
+                  setEditText('');
                 }}
-                className={`text-xs flex items-center gap-1 transition-colors ${activeReplyId === data.id ? 'text-blue-400' : 'text-gray-500 hover:text-white'}`}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center gap-2"
               >
-                <FaReply /> رد
-              </button>
-            )}
-
-            {/* Edit/Delete buttons - only for own comments */}
-            {(data.isNew || data.user === user?.name || data.user === 'أنت') && (
-              <>
-                <button
-                  onClick={() => { setEditingId(data.id); setEditText(data.text); }}
-                  className="text-xs flex items-center gap-1 text-gray-500 hover:text-yellow-400 transition-colors"
-                >
-                  <FaEdit /> تعديل
-                </button>
-                <button
-                  onClick={() => handleDelete(data.id)}
-                  className="text-xs flex items-center gap-1 text-gray-500 hover:text-red-400 transition-colors"
-                >
-                  <FaTrash /> حذف
-                </button>
-              </>
-            )}
-          </div>
-
-          {activeReplyId === data.id && !isReply && (
-            <div className="mt-4 flex gap-2 animate-in fade-in slide-in-from-top-1">
-              <input
-                type="text"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder={`الرد على ${data.user}...`}
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
-                autoFocus
-              />
-              <button
-                onClick={() => submitReply(data.id)}
-                disabled={!replyText.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
-              >
-                إرسال
+                <FaTimes /> إلغاء
               </button>
             </div>
+          </div>
+        ) : (
+          <p className="text-gray-300 mb-3 whitespace-pre-wrap">{comment.content}</p>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-4 text-sm">
+          <button
+            onClick={() => onLike(comment.id)}
+            disabled={!isAuthenticated}
+            className={`flex items-center gap-1 ${isAuthenticated ? 'hover:text-blue-400 cursor-pointer' : 'cursor-not-allowed opacity-50'
+              } text-gray-400 transition-colors`}
+          >
+            <FaThumbsUp />
+            <span>{comment.likes_count}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setReplyingTo(comment.id);
+              setReplyText('');
+            }}
+            disabled={!isAuthenticated}
+            className={`flex items-center gap-1 ${isAuthenticated ? 'hover:text-blue-400 cursor-pointer' : 'cursor-not-allowed opacity-50'
+              } text-gray-400 transition-colors`}
+          >
+            <FaReply /> رد
+          </button>
+
+          {isOwner && editingId !== comment.id && (
+            <>
+              <button
+                onClick={() => {
+                  setEditingId(comment.id);
+                  setEditText(comment.content);
+                }}
+                className="flex items-center gap-1 text-gray-400 hover:text-yellow-400 transition-colors"
+              >
+                <FaEdit /> تعديل
+              </button>
+              <button
+                onClick={() => onDelete(comment.id)}
+                className="flex items-center gap-1 text-gray-400 hover:text-red-400 transition-colors"
+              >
+                <FaTrash /> حذف
+              </button>
+            </>
           )}
         </div>
       </div>
-    );
-  };
+
+      {/* Reply Form */}
+      {replyingTo === comment.id && (
+        <div className="mr-8 mt-3">
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none min-h-[80px] resize-none"
+              placeholder={`الرد على ${comment.user_name}...`}
+              autoFocus
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => onReply(comment.id)}
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2"
+              >
+                <FaPaperPlane /> إرسال
+              </button>
+              <button
+                onClick={() => {
+                  setReplyingTo(null);
+                  setReplyText('');
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Nested Replies (Recursive Call) */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-3">
+          {comment.replies.map(reply => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              level={level + 1}
+              isAuthenticated={isAuthenticated}
+              currentUser={currentUser}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              replyText={replyText}
+              setReplyText={setReplyText}
+              editingId={editingId}
+              setEditingId={setEditingId}
+              editText={editText}
+              setEditText={setEditText}
+              submitting={submitting}
+              onReply={onReply}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onLike={onLike}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 3. المكون الرئيسي
+interface CommentsSectionProps {
+  chapterId?: string;
+  mangaId?: string;
+}
+
+export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
+  const { isAuthenticated, user } = useAuth();
+
+  // State
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // New comment
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  // Load comments on mount
+  useEffect(() => {
+    loadComments();
+  }, [chapterId, mangaId]);
+
+  async function loadComments() {
+    setLoading(true);
+    setError('');
+
+    try {
+      let data: Comment[];
+      if (chapterId) {
+        data = await commentsAPI.getCommentsByChapter(chapterId);
+      } else if (mangaId) {
+        data = await commentsAPI.getCommentsByManga(mangaId);
+      } else {
+        setError('No chapter or manga ID provided');
+        return;
+      }
+
+      setComments(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load comments');
+      console.error('Error loading comments:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmitComment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newComment.trim() || !isAuthenticated) return;
+
+    setSubmitting(true);
+    try {
+      const newCommentData = await commentsAPI.createComment({
+        content: newComment.trim(),
+        chapter_id: chapterId,
+        manga_id: mangaId
+      });
+
+      setComments(prev => [newCommentData, ...prev]);
+      setNewComment('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to post comment');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleReply(parentId: string) {
+    if (!replyText.trim() || !isAuthenticated) return;
+
+    setSubmitting(true);
+    try {
+      const newReply = await commentsAPI.createComment({
+        content: replyText.trim(),
+        chapter_id: chapterId,
+        manga_id: mangaId,
+        parent: parentId
+      });
+
+      setComments(prev => addReplyToComment(prev, parentId, newReply));
+      setReplyText('');
+      setReplyingTo(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to post reply');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleEdit(commentId: string) {
+    if (!editText.trim()) return;
+
+    try {
+      await commentsAPI.updateComment(commentId, editText.trim());
+
+      setComments(prev => updateCommentContent(prev, commentId, editText.trim()));
+      setEditingId(null);
+      setEditText('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update comment');
+    }
+  }
+
+  async function handleDelete(commentId: string) {
+    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+
+    try {
+      await commentsAPI.deleteComment(commentId);
+      setComments(prev => removeComment(prev, commentId));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete comment');
+    }
+  }
+
+  async function handleLike(commentId: string) {
+    if (!isAuthenticated) return;
+
+    try {
+      const result = await commentsAPI.toggleLike(commentId);
+      setComments(prev => updateCommentLikes(prev, commentId, result.likes_count));
+    } catch (err: any) {
+      setError(err.message || 'Failed to like comment');
+    }
+  }
+
+  // Helper functions
+  function addReplyToComment(comments: Comment[], parentId: string, newReply: Comment): Comment[] {
+    return comments.map(comment => {
+      if (comment.id === parentId) {
+        return {
+          ...comment,
+          replies: [...comment.replies, newReply]
+        };
+      }
+      if (comment.replies.length > 0) {
+        return {
+          ...comment,
+          replies: addReplyToComment(comment.replies, parentId, newReply)
+        };
+      }
+      return comment;
+    });
+  }
+
+  function updateCommentContent(comments: Comment[], targetId: string, newContent: string): Comment[] {
+    return comments.map(comment => {
+      if (comment.id === targetId) {
+        return { ...comment, content: newContent, is_edited: true };
+      }
+      if (comment.replies.length > 0) {
+        return {
+          ...comment,
+          replies: updateCommentContent(comment.replies, targetId, newContent)
+        };
+      }
+      return comment;
+    });
+  }
+
+  function removeComment(comments: Comment[], targetId: string): Comment[] {
+    return comments.filter(comment => {
+      if (comment.id === targetId) return false;
+      if (comment.replies.length > 0) {
+        comment.replies = removeComment(comment.replies, targetId);
+      }
+      return true;
+    });
+  }
+
+  function updateCommentLikes(comments: Comment[], targetId: string, newCount: number): Comment[] {
+    return comments.map(comment => {
+      if (comment.id === targetId) {
+        return { ...comment, likes_count: newCount };
+      }
+      if (comment.replies.length > 0) {
+        return {
+          ...comment,
+          replies: updateCommentLikes(comment.replies, targetId, newCount)
+        };
+      }
+      return comment;
+    });
+  }
 
   return (
-    <div className="w-full max-w-3xl mx-auto mt-12 p-4 md:p-6 bg-gray-900/50 rounded-2xl border border-gray-800 backdrop-blur-sm">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        التعليقات <span className="text-sm bg-blue-600 px-2 py-0.5 rounded-full">{comments.reduce((acc, curr) => acc + 1 + curr.replies.length, 0)}</span>
+    <div className="bg-gray-900 rounded-xl p-6">
+      <h3 className="text-2xl font-bold text-white mb-6">
+        التعليقات ({comments.length})
       </h3>
 
-      <form onSubmit={handleSubmit} className="mb-10 relative">
-        <div className="flex gap-4">
-          <div className="mt-1 hidden sm:block">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">أ</div>
-          </div>
-          <div className="flex-1 relative">
+      {error && (
+        <div className="mb-4 p-4 bg-red-900/30 border border-red-600 rounded-lg text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* New Comment Form */}
+      {isAuthenticated ? (
+        <form onSubmit={handleSubmitComment} className="mb-8">
+          <div className="relative">
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder={isAuthenticated ? "شاركنا رأيك..." : "سجّل دخول لإضافة تعليق..."}
+              placeholder="شاركنا رأيك..."
               className="w-full bg-gray-800 text-gray-200 rounded-xl p-4 pr-12 min-h-[100px] border border-gray-700 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-500"
-              disabled={!isAuthenticated && false}
+              disabled={submitting}
             />
             <button
               type="submit"
-              disabled={!newComment.trim()}
-              className="absolute bottom-3 left-3 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all"
+              disabled={!newComment.trim() || submitting}
+              className="absolute bottom-3 left-3 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <FaPaperPlane />
             </button>
           </div>
-        </div>
-      </form>
-
-      {isLoading ? (
-        <div className="text-center text-gray-500 py-8">جاري تحميل التعليقات...</div>
+        </form>
       ) : (
-        <div className="space-y-4">
-          {sortedComments.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">لا توجد تعليقات بعد. كن أول من يعلق!</div>
-          ) : (
-            sortedComments.map((comment) => (
-              <div key={comment.id} className="flex flex-col">
-                <CommentItem data={comment} />
-                {comment.replies && comment.replies.length > 0 && (
-                  <div className="flex flex-col border-l-2 border-gray-800 mr-5 mt-1">
-                    {comment.replies.map(reply => (
-                      <CommentItem key={reply.id} data={reply} isReply={true} parentId={comment.id} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+        <div className="mb-8 p-4 bg-gray-800 rounded-lg border border-gray-700 text-gray-400 text-center">
+          سجّل دخول لإضافة تعليق
+        </div>
+      )}
+
+      {/* Comments List */}
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          لا توجد تعليقات بعد. كن أول من يعلّق!
+        </div>
+      ) : (
+        <div>
+          {comments.map(comment => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              isAuthenticated={isAuthenticated}
+              currentUser={user}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              replyText={replyText}
+              setReplyText={setReplyText}
+              editingId={editingId}
+              setEditingId={setEditingId}
+              editText={editText}
+              setEditText={setEditText}
+              submitting={submitting}
+              onReply={handleReply}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onLike={handleLike}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaTrophy } from 'react-icons/fa';
+import { DashboardListSkeleton } from '@/components/DashboardSkeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -57,17 +58,37 @@ export default function AchievementsPage() {
         if (!confirm('هل أنت متأكد من حذف هذا الإنجاز؟')) return;
 
         try {
-            await fetch(`${API_URL}/achievements/${id}/`, { method: 'DELETE' });
+            const token = localStorage.getItem('manga_token');
+            const res = await fetch(`${API_URL}/achievements/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error('فشل الحذف');
+            }
+
             setAchievements(achievements.filter(a => a.id !== id));
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting achievement:', error);
+            alert(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-white">الإنجازات</h1>
+                    <button className="flex items-center gap-2 bg-yellow-600 text-white px-4 py-2 rounded-lg">
+                        <FaPlus /> إضافة إنجاز
+                    </button>
+                </div>
+                <div className="space-y-4">
+                    <DashboardListSkeleton count={9} />
+                </div>
             </div>
         );
     }
@@ -180,21 +201,31 @@ function AchievementModal({ item, onClose, onSuccess }: { item: Achievement | nu
         setLoading(true);
 
         try {
+            const token = localStorage.getItem('manga_token');
             const url = item ? `${API_URL}/achievements/${item.id}/` : `${API_URL}/achievements/`;
             const payload = {
                 ...formData,
                 target_manga: formData.target_manga || null,
             };
 
-            await fetch(url, {
+            const res = await fetch(url, {
                 method: item ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(payload),
             });
 
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.detail || errorData.error || 'فشل الحفظ');
+            }
+
             onSuccess();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving achievement:', error);
+            alert(error.message || 'حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }

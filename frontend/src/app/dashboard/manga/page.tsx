@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaStar, FaLayerGroup, FaFilter } from 'react-icons/fa';
 import { ProxyImage } from '@/components/ProxyImage';
+import { MangaCardSkeleton } from '@/components/Skeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -36,9 +37,16 @@ interface Category {
 export default function MangaListPage() {
     const [manga, setManga] = useState<Manga[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editingManga, setEditingManga] = useState<Manga | null>(null);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+    const PAGE_SIZE = 20;
 
     // Filters
     const [allGenres, setAllGenres] = useState<Genre[]>([]);
@@ -53,15 +61,52 @@ export default function MangaListPage() {
         fetchFilters();
     }, []);
 
-    async function fetchManga() {
+    async function fetchManga(reset: boolean = true) {
         try {
-            const res = await fetch(`${API_URL}/manga/`);
+            if (reset) {
+                setLoading(true);
+                setCurrentPage(1);
+            }
+
+            const page = reset ? 1 : currentPage;
+            const res = await fetch(`${API_URL}/manga/?page=${page}&page_size=${PAGE_SIZE}`);
             const data = await res.json();
-            setManga(Array.isArray(data) ? data : data.results || []);
+
+            const results = Array.isArray(data) ? data : (data.results || []);
+
+            if (reset) {
+                setManga(results);
+            } else {
+                setManga(prev => [...prev, ...results]);
+            }
+
+            setTotalCount(data.count || results.length);
+            setHasMore(data.next !== null && data.next !== undefined);
         } catch (error) {
             console.error('Error fetching manga:', error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+        }
+    }
+
+    async function loadMoreManga() {
+        if (!hasMore || loadingMore) return;
+
+        setLoadingMore(true);
+        setCurrentPage(prev => prev + 1);
+
+        try {
+            const res = await fetch(`${API_URL}/manga/?page=${currentPage + 1}&page_size=${PAGE_SIZE}`);
+            const data = await res.json();
+            const results = Array.isArray(data) ? data : (data.results || []);
+
+            setManga(prev => [...prev, ...results]);
+            setHasMore(data.next !== null && data.next !== undefined);
+        } catch (error) {
+            console.error('Error loading more manga:', error);
+        } finally {
+            setLoadingMore(false);
         }
     }
 
@@ -84,10 +129,22 @@ export default function MangaListPage() {
         if (!confirm('هل أنت متأكد من حذف هذه المانجا؟')) return;
 
         try {
-            await fetch(`${API_URL}/manga/${id}/`, { method: 'DELETE' });
+            const token = localStorage.getItem('manga_token');
+            const res = await fetch(`${API_URL}/manga/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error('فشل الحذف');
+            }
+
             setManga(manga.filter(m => m.id !== id));
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting manga:', error);
+            alert(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
@@ -106,8 +163,20 @@ export default function MangaListPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-white">إدارة المانجا</h1>
+                    <Link
+                        href="/dashboard/manga/add"
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                        <FaPlus /> إضافة مانجا
+                    </Link>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <MangaCardSkeleton count={8} />
+                </div>
             </div>
         );
     }
@@ -281,6 +350,33 @@ export default function MangaListPage() {
             {filteredManga.length === 0 && (
                 <div className="text-center py-12 text-gray-400">
                     لا توجد مانجا للعرض
+                </div>
+            )}
+
+            {/* Load More Button */}
+            {!search && !filterStatus && !filterCategory && !filterGenre && hasMore && filteredManga.length > 0 && (
+                <div className="flex justify-center mt-8">
+                    <button
+                        onClick={loadMoreManga}
+                        disabled={loadingMore}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loadingMore ? (
+                            <span className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                جاري التحميل...
+                            </span>
+                        ) : (
+                            `عرض المزيد (${totalCount - filteredManga.length} متبقية)`
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Loading More Skeleton */}
+            {loadingMore && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+                    <MangaCardSkeleton count={4} />
                 </div>
             )}
         </div>

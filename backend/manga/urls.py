@@ -1,6 +1,3 @@
-"""
-URL Configuration for Manga API
-"""
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -8,6 +5,8 @@ from . import auth_views
 from . import translation_views
 from . import translation_endpoints
 from . import async_chapter_upload
+from . import translate_dashboard_views
+from . import user_translation_views
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -38,7 +37,7 @@ urlpatterns = [
     path('auth/refresh/', auth_views.refresh_token_view, name='auth-refresh'),
     path('auth/profile/', auth_views.profile_view, name='auth-profile'),
     
-    # AI Translation endpoints
+    # AI Translation endpoints (Admin)
     path('translation/ai-models/', translation_views.ai_models_view, name='ai-models-list'),
     path('translation/ai-models/<uuid:model_id>/', translation_views.ai_model_detail_view, name='ai-model-detail'),
     path('translation/ai-models/<uuid:model_id>/test/', translation_views.test_ai_model_view, name='ai-model-test'),
@@ -47,6 +46,20 @@ urlpatterns = [
     path('translation/jobs/<uuid:job_id>/', translation_views.translation_job_status, name='translation-job-status'),
     path('translation/jobs/<uuid:job_id>/download/', translation_views.download_translated_cbz, name='translation-download'),
     path('translation/jobs/<uuid:job_id>/delete/', translation_views.delete_translation_job, name='translation-delete'),
+
+    # Translation Dashboard (Admin - integrated workflow)
+    path('translation/upload-for-preview/', translate_dashboard_views.upload_for_preview, name='upload_for_preview'),
+    path('translation/status/<uuid:job_id>/', translate_dashboard_views.check_translation_status, name='check_translation_status'),
+    path('translation/preview/<uuid:job_id>/', translate_dashboard_views.get_translation_preview, name='get_translation_preview'),
+    path('translation/preview/<uuid:job_id>/image/<str:image_type>/<int:page_number>/', translate_dashboard_views.serve_preview_image, name='serve_preview_image'),
+    path('translation/publish-chapter/', translate_dashboard_views.publish_translated_chapter, name='publish_translated_chapter'),
+    
+    # User Translation (Public)
+    path('translate/upload/', user_translation_views.upload_for_translation, name='user-translate-upload'),
+    path('translate/status/<uuid:job_id>/', user_translation_views.get_translation_status, name='user-translate-status'),
+    path('translate/preview/<uuid:job_id>/', user_translation_views.get_translation_preview, name='user-translate-preview'),
+    path('translate/preview/<uuid:job_id>/image/<str:image_type>/<int:page_number>/', user_translation_views.serve_preview_image, name='user-translate-image'),
+    path('translate/download/<uuid:job_id>/', user_translation_views.download_translated_cbz, name='user-translate-download'),
     
     # New Translation Workflow endpoints
     path('translation/new/upload/', translation_endpoints.upload_for_translation, name='translation-new-upload'),

@@ -8,6 +8,7 @@ interface ProxyImageProps {
     className?: string;
     fallbackSrc?: string;
     onError?: () => void;
+    onClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
 // قائمة بوكلاء متعددين للاستخدام
@@ -28,7 +29,8 @@ export function ProxyImage({
     alt,
     className = '',
     fallbackSrc = '/placeholder.png',
-    onError
+    onError,
+    onClick
 }: ProxyImageProps) {
     const [currentSrc, setCurrentSrc] = useState(src);
     const [proxyIndex, setProxyIndex] = useState(-1);
@@ -60,6 +62,8 @@ export function ProxyImage({
                 src={fallbackSrc}
                 alt={alt}
                 className={className}
+                onClick={onClick}
+                loading="lazy"
             />
         );
     }
@@ -70,6 +74,7 @@ export function ProxyImage({
             alt={alt}
             className={className}
             onError={handleImageError}
+            onClick={onClick}
             loading="lazy"
         />
     );

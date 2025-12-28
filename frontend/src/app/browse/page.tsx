@@ -229,53 +229,74 @@
 //   );
 // }
 'use client';
+
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { ComicGrid } from '@/components/ComicGrid';
-import { FilterSection } from '@/components/FilterSection';
 import { Footer } from '@/components/Footer';
+import { FilterSection } from '@/components/FilterSection';
+import { ComicGrid } from '@/components/ComicGrid';
 import { getMangaList } from '@/services/api';
-// 1. قم باستيراد FilterState هنا
 import { Manga, FilterState } from '@/types/manga';
-import { FaLayerGroup, FaSearch } from 'react-icons/fa';
-
-// 2. احذف واجهة Filters المحلية بالكامل لأننا لم نعد بحاجة إليها
-// interface Filters { ... }  <-- احذف هذا الجزء
+import { FaLayerGroup, FaSearch, FaRandom, FaFilter } from 'react-icons/fa'; // Added FaRandom, FaFilter
 
 export default function BrowsePage() {
-   const [mangaList, setMangaList] = useState<Manga[]>([]);
+   const [manga, setManga] = useState<Manga[]>([]);
    const [loading, setLoading] = useState(true);
-
-   // 3. استخدم FilterState بدلاً من Filters
-   const [currentFilters, setCurrentFilters] = useState<FilterState>({
+   const [loadingMore, setLoadingMore] = useState(false);
+   const [filters, setFilters] = useState<FilterState>({
+      query: '',
       status: 'All',
-      sortBy: 'Name'
+      categories: [],
+      sortBy: 'Latest Chapter'
    });
 
-   // 4. عدّل نوع المعامل هنا أيضاً
-   const fetchData = async (filters: FilterState) => {
-      setLoading(true);
+   // Pagination state
+   const [currentPage, setCurrentPage] = useState(1);
+   const [hasMore, setHasMore] = useState(true);
+   const [totalCount, setTotalCount] = useState(0);
+   const [isFilterVisible, setIsFilterVisible] = useState(false); // Added for filter visibility
+
+   useEffect(() => {
+      loadManga(true);
+   }, [filters]);
+
+   const loadManga = async (reset: boolean = false) => {
       try {
-         const data = await getMangaList(filters);
-         setMangaList(data);
+         if (reset) {
+            setLoading(true);
+            setCurrentPage(1);
+         } else {
+            setLoadingMore(true);
+         }
+
+         const page = reset ? 1 : currentPage + 1;
+         const response = await getMangaList(page, 20, filters); // Assuming getMangaList now accepts page, limit, and filters
+
+         if (reset) {
+            setManga(response.results);
+            setCurrentPage(1);
+         } else {
+            setManga(prev => [...prev, ...response.results]);
+            setCurrentPage(page);
+         }
+
+         setTotalCount(response.count);
+         setHasMore(response.next !== null);
       } catch (error) {
-         console.error("Error fetching manga:", error);
+         console.error('Error loading manga:', error);
       } finally {
          setLoading(false);
+         setLoadingMore(false);
       }
    };
 
-   useEffect(() => {
-      fetchData(currentFilters);
-   }, [currentFilters]);
-
    // 5. وهنا أيضاً
    const handleFilter = (newFilters: FilterState) => {
-      setCurrentFilters(prev => ({ ...prev, ...newFilters }));
+      setFilters(prev => ({ ...prev, ...newFilters }));
    };
 
    const handleSort = (sortType: string) => {
-      setCurrentFilters(prev => ({ ...prev, sortBy: sortType }));
+      setFilters(prev => ({ ...prev, sortBy: sortType }));
    };
 
    return (
@@ -305,25 +326,50 @@ export default function BrowsePage() {
                   <div className="flex items-center justify-between mb-6">
                      <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <FaLayerGroup className="text-blue-500" />
-                        {currentFilters.query ? `نتائج البحث: "${currentFilters.query}"` : 'جميع الأعمال'}
+                        {filters.query ? `نتائج البحث: "${filters.query}"` : 'جميع الأعمال'}
                         <span className="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full ml-2">
-                           {mangaList.length}
+                           {totalCount}
                         </span>
                      </h2>
                   </div>
 
-                  {loading ? (
+                  {loading && manga.length === 0 ? (
                      <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                      </div>
-                  ) : mangaList.length > 0 ? (
-                     <ComicGrid
-                        mangaList={mangaList}
-                        onLoadMore={() => { }}
-                        hasMore={false} // يمكنك تفعيل الـ Pagination لاحقاً
-                        showHeader={false}
-                        limit={undefined}
-                     />
+                  ) : manga.length > 0 ? (
+                     <>
+                        <ComicGrid
+                           mangaList={manga}
+                           onLoadMore={() => { }}
+                           hasMore={false}
+                           showHeader={false}
+                           limit={undefined}
+                        />
+
+                        {/* Load More Button */}
+                        {hasMore && (
+                           <div className="flex justify-center mt-12">
+                              <button
+                                 onClick={() => loadManga(false)}
+                                 disabled={loadingMore}
+                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                 {loadingMore ? (
+                                    <span className="flex items-center gap-2">
+                                       <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                       </svg>
+                                       جاري التحميل...
+                                    </span>
+                                 ) : (
+                                    `عرض المزيد (${totalCount - manga.length} متبقية)`
+                                 )}
+                              </button>
+                           </div>
+                        )}
+                     </>
                   ) : (
                      <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
@@ -331,7 +377,7 @@ export default function BrowsePage() {
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">لم يتم العثور على نتائج</h3>
                         <button
-                           onClick={() => setCurrentFilters({ status: 'All', sortBy: 'Name' })}
+                           onClick={() => setFilters({ status: 'All', sortBy: 'Name', query: '', categories: [] })}
                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                            إعادة تعيين الكل

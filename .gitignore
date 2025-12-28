@@ -45,6 +45,12 @@ frontend/.env.*
 **/.coverage
 **/htmlcov/
 **/.tox/
+**/translation_temp/
+**/translation_cbz/ 
+backend/translation_cbz/
+**/translations/temp
+*.cbz
+*.zip
 
 # Virtual environments anywhere
 **/.venv/

@@ -21,6 +21,18 @@ const nextConfig = {
       },
     ],
   },
+  // Allow larger file uploads
+  api: {
+    bodyParser: {
+      sizeLimit: '500mb',
+    },
+    responseLimit: '500mb',
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
+  },
 };
 
 export default nextConfig;

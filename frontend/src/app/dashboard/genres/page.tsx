@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaTags } from 'react-icons/fa';
+import { DashboardListSkeleton } from '@/components/DashboardSkeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -37,22 +38,37 @@ export default function GenresPage() {
         if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
 
         try {
-            const res = await fetch(`${API_URL}/genres/${slug}/`, { method: 'DELETE' });
+            const token = localStorage.getItem('manga_token');
+            const res = await fetch(`${API_URL}/genres/${slug}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
             if (res.ok) {
                 setGenres(genres.filter(g => g.slug !== slug));
             } else {
-                alert('فشل الحذف');
+                throw new Error('فشل الحذف');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting genre:', error);
-            alert('حدث خطأ أثناء الحذف');
+            alert(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-white">التصنيفات (Genres)</h1>
+                    <button className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg">
+                        <FaPlus /> إضافة تصنيف
+                    </button>
+                </div>
+                <div className="space-y-4">
+                    <DashboardListSkeleton count={8} />
+                </div>
             </div>
         );
     }
@@ -128,19 +144,28 @@ function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClos
         setLoading(true);
 
         try {
+            const token = localStorage.getItem('manga_token');
             const url = genre
                 ? `${API_URL}/genres/${genre.slug}/`
                 : `${API_URL}/genres/`;
 
-            await fetch(url, {
+            const res = await fetch(url, {
                 method: genre ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ name }),
             });
 
+            if (!res.ok) {
+                throw new Error('فشل الحفظ');
+            }
+
             onSuccess();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving genre:', error);
+            alert(error.message || 'حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }
