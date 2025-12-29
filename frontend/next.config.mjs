@@ -1,20 +1,37 @@
+// /** @type {import('next').NextConfig} */
+// const nextConfig = {};
+
+// export default nextConfig;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
-
-  images: {
-    // خيار آمن لتجنب مشاكل دومينات الصور
-    unoptimized: true,
+  // تجاهل أخطاء التايب سكريبت لمنع توقف الرفع
+  typescript: {
+    ignoreBuildErrors: true,
   },
-
-  async rewrites() {
-    return [
+  // تجاهل أخطاء ESLint لمنع توقف الرفع
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // إعدادات الصور (اختياري، اتركها لضمان عدم حدوث مشاكل مع الصور الخارجية)
+  images: {
+    remotePatterns: [
       {
-        source: "/backend/:path*",
-        destination: `${process.env.BACKEND_ORIGIN}/:path*`,
+        protocol: "https",
+        hostname: "**",
       },
-    ];
+    ],
+  },
+  // Allow larger file uploads
+  api: {
+    bodyParser: {
+      sizeLimit: '500mb',
+    },
+    responseLimit: '500mb',
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
   },
 };
 
