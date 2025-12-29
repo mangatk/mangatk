@@ -192,6 +192,18 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+# Cache Configuration - Required for async upload progress tracking
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 3600,  # 1 hour
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        }
+    }
+}
+
 # ImgBB API Configuration
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 IMGBB_API_URL = 'https://api.imgbb.com/1/upload'
