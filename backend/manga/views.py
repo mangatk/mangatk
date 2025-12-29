@@ -745,3 +745,46 @@ class AchievementViewSet(viewsets.ModelViewSet):
             'newly_unlocked': newly_unlocked,
             'stats': stats
         })
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import FcmToken
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def register_fcm_token(request):
+    token = request.data.get("token")
+    if not token:
+        return Response({"detail": "token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # اربط التوكن بالمستخدم
+    obj, created = FcmToken.objects.get_or_create(token=token, defaults={"user": request.user})
+    if not created and obj.user_id != request.user.id:
+        obj.user = request.user
+        obj.save(update_fields=["user"])
+
+    return Response({"ok": True})
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+from .notifications.onesignal import send_onesignal_to_segment
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def onesignal_test(request):
+    title = request.data.get("title", "اختبار")
+    body = request.data.get("body", "هذا إشعار اختبار من Django ✅")
+
+    try:
+        result = send_onesignal_to_segment(title=title, body=body)
+        return Response({"ok": True, "result": result})
+    except Exception as e:
+        return Response({"ok": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+

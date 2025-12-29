@@ -7,6 +7,10 @@ from . import translation_endpoints
 from . import async_chapter_upload
 from . import translate_dashboard_views
 from . import user_translation_views
+from .views import register_fcm_token
+from .views import onesignal_test
+
+
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -30,6 +34,7 @@ urlpatterns = [
     path('chapters/upload-async/', async_chapter_upload.start_async_chapter_upload, name='chapter-upload-async'),
     path('chapters/upload-progress/<str:job_id>/', async_chapter_upload.get_upload_progress, name='chapter-upload-progress'),
     path('chapters/cancel-upload/<str:job_id>/', async_chapter_upload.cancel_upload, name='chapter-cancel-upload'),
+    path('chapters/<uuid:chapter_id>/upload-status/', async_chapter_upload.get_chapter_upload_progress, name='chapter-upload-status'),
     
     # Auth endpoints (JWT)
     path('auth/login/', auth_views.login_view, name='auth-login'),
@@ -69,7 +74,10 @@ urlpatterns = [
     path('translation/new/preview/<str:job_id>/', translation_endpoints.get_images_preview, name='translation-new-preview'),
     path('translation/new/save/<str:job_id>/', translation_endpoints.save_translated_chapter, name='translation-new-save'),
     path('translation/new/delete/<str:job_id>/', translation_endpoints.delete_translation_job, name='translation-new-delete'),
-    
+    path("push/register-token/", register_fcm_token),
+    path("push/onesignal/test/", onesignal_test),
+
     # Router URLs (must be LAST to avoid conflicts with specific endpoints above)
     path('', include(router.urls)),
 ]
+

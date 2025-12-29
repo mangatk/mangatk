@@ -175,6 +175,21 @@ class Chapter(models.Model):
     # تمت الإضافة: لحل مشكلة ChapterAdmin (تخزين الكاش للتقييم)
     _cached_avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0, null=True, blank=True)
     
+    # Upload progress tracking
+    upload_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'قيد الانتظار'),
+            ('uploading', 'جاري الرفع'),
+            ('completed', 'مكتمل'),
+            ('failed', 'فشل')
+        ],
+        default='completed',
+        help_text='حالة رفع الصور'
+    )
+    uploaded_images_count = models.IntegerField(default=0, help_text='عدد الصور المرفوعة')
+    total_images_count = models.IntegerField(default=0, help_text='إجمالي عدد الصور')
+    
     class Meta:
         ordering = ['manga', '-number']
         unique_together = ['manga', 'number']
@@ -199,6 +214,13 @@ class Chapter(models.Model):
         """Calculate average rating for this chapter"""
         avg = self.ratings.aggregate(Avg('rating'))['rating__avg']
         return round(avg, 1) if avg else 0.0
+    
+    @property
+    def upload_progress_percentage(self):
+        """Calculate upload progress percentage"""
+        if self.total_images_count > 0:
+            return round((self.uploaded_images_count / self.total_images_count) * 100)
+        return 0
 
 
 class ChapterImage(models.Model):
@@ -651,3 +673,17 @@ class TranslationJob(models.Model):
     
     def __str__(self):
         return f"Translation Job {self.original_filename} - {self.status}"
+
+from django.conf import settings
+from django.db import models
+
+class FcmToken(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="fcm_tokens")
+    token = models.TextField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user_id}"
+
+

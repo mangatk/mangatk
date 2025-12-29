@@ -97,7 +97,7 @@ def start_async_chapter_upload(request):
                 chapter.release_date = release_date
             chapter.save()
         
-        # Extract images from ZIP
+        # Extract images from ZIP FIRST
         image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
         image_data_list = []
         
@@ -127,6 +127,13 @@ def start_async_chapter_upload(request):
                 'error': 'لا توجد صور في الملف'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # NOW set upload status with correct count
+        chapter.upload_status = 'uploading'
+        chapter.uploaded_images_count = 0
+        chapter.total_images_count = len(image_data_list)
+        chapter.save(update_fields=['upload_status', 'uploaded_images_count', 'total_images_count'])
+        logger.info(f"📦 Extracted {len(image_data_list)} images from ZIP, starting upload for chapter {chapter.id}")
+        
         # Generate job ID
         job_id = str(uuid.uuid4())
         
@@ -144,28 +151,43 @@ def start_async_chapter_upload(request):
         
         # Upload function for single image
         def upload_single_image(image_info):
-            file_obj = io.BytesIO(image_info['data'])
-            file_obj.name = image_info['filename']
-            
-            result = ImgBBService.upload_image(file_obj, image_info['name'])
-            
-            if result:
-                # Create ChapterImage record
-                ChapterImage.objects.create(
-                    chapter=chapter,
-                    page_number=image_info['page_num'],
-                    image_url=result['url'],
-                    width=result.get('width'),
-                    height=result.get('height'),
-                    original_filename=image_info['filename']
-                )
-                return {
-                    'success': True,
-                    'page_num': image_info['page_num'],
-                    'url': result['url']
-                }
-            else:
-                raise Exception(f"فشل رفع الصورة {image_info['filename']}")
+            try:
+                # Create BytesIO object from binary data
+                file_obj = io.BytesIO(image_info['data'])
+                file_obj.name = image_info['filename']  # Add name attribute
+                file_obj.seek(0)  # Reset pointer to beginning
+                
+                logger.info(f"🔄 Uploading image: {image_info['filename']} (page {image_info['page_num']})")
+                
+                result = ImgBBService.upload_image(file_obj, image_info['name'])
+                
+                if result:
+                    # Create ChapterImage record
+                    ChapterImage.objects.create(
+                        chapter=chapter,
+                        page_number=image_info['page_num'],
+                        image_url=result['url'],
+                        width=result.get('width'),
+                        height=result.get('height'),
+                        original_filename=image_info['filename']
+                    )
+                    
+                    # Update chapter progress - LIKE TRANSLATION!
+                    chapter.uploaded_images_count += 1
+                    chapter.save(update_fields=['uploaded_images_count'])
+                    logger.info(f"✅ Uploaded page {image_info['page_num']} ({chapter.uploaded_images_count}/{chapter.total_images_count})")
+                    
+                    return {
+                        'success': True,
+                        'page_num': image_info['page_num'],
+                        'url': result['url']
+                    }
+                else:
+                    logger.error(f"❌ ImgBB returned None for {image_info['filename']}")
+                    raise Exception(f"فشل رفع الصورة {image_info['filename']}")
+            except Exception as e:
+                logger.error(f"❌ Error uploading {image_info['filename']}: {str(e)}")
+                raise Exception(f"فشل رفع الصورة {image_info['filename']}: {str(e)}")
         
         # Progress callback
         def on_progress(current, total, result):
@@ -185,6 +207,10 @@ def start_async_chapter_upload(request):
                 job_data['failed'] = results['failed']
                 job_data['errors'] = results['errors']
                 cache.set(f'upload_job_{job_id}', job_data, timeout=3600)
+            
+            # Update chapter status
+            chapter.upload_status = 'completed'
+            chapter.save(update_fields=['upload_status'])
             logger.info(f"Chapter upload job {job_id} completed")
         
         # Error callback
@@ -285,4 +311,40 @@ def cancel_upload(request, job_id):
     else:
         return Response({
             'error': 'Job not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def get_chapter_upload_progress(request, chapter_id):
+    """
+    الحصول على تقدم رفع الفصل من Chapter model مباشرة (مثل الترجمة)
+    
+    GET /api/chapters/<chapter_id>/upload-status/
+    
+    Returns:
+        - status: upload_status من Chapter
+        - uploaded: uploaded_images_count
+        - total: total_images_count
+        - percentage: النسبة المئوية
+    """
+    try:
+        chapter = Chapter.objects.get(id=chapter_id)
+        
+        percentage = 0
+        if chapter.total_images_count > 0:
+            percentage = round((chapter.uploaded_images_count / chapter.total_images_count) * 100)
+        
+        logger.info(f"📤 Chapter {chapter_id} progress: {chapter.uploaded_images_count}/{chapter.total_images_count} ({percentage}%)")
+        
+        return Response({
+            'chapter_id': str(chapter.id),
+            'status': chapter.upload_status,
+            'uploaded': chapter.uploaded_images_count,
+            'total': chapter.total_images_count,
+            'percentage': percentage
+        })
+    except Chapter.DoesNotExist:
+        return Response({
+            'error': 'Chapter not found'
         }, status=status.HTTP_404_NOT_FOUND)
