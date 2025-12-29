@@ -243,7 +243,7 @@ export default function MangaDetailPage() {
     );
 }
 
-// Add Chapter Modal with Async Upload
+// Add Chapter Modal with Async Upload and Progress Tracking
 function AddChapterModal({
     mangaId,
     mangaTitle,
@@ -261,12 +261,13 @@ function AddChapterModal({
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [jobId, setJobId] = useState<string | null>(null);
 
-    // Enhanced progress state
+    // Enhanced progress state for EnhancedUploadProgress
     const [uploadState, setUploadState] = useState({
         stages: [
-            { name: 'استخراج الصور من ZIP', weight: 20 },
-            { name: 'رفع الصور إلى ImgBB', weight: 80 }
+            { name: 'استخراج الصور من ZIP', weight: 10 },
+            { name: 'رفع الصور إلى ImgBB', weight: 90 }
         ],
         currentStage: 0,
         currentStageProgress: 0,
@@ -276,6 +277,19 @@ function AddChapterModal({
     });
 
     const { getAuthHeaders } = useAuth();
+
+    // Cleanup polling interval on unmount
+    useEffect(() => {
+        return () => {
+            if (jobId) {
+                // Clear any pending intervals
+                const highestId = window.setTimeout(() => { }, 0);
+                for (let i = 0; i < highestId; i++) {
+                    window.clearTimeout(i);
+                }
+            }
+        };
+    }, [jobId]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -289,10 +303,13 @@ function AddChapterModal({
         setUploadState(prev => ({
             ...prev,
             status: 'uploading',
+            currentStage: 0,
+            currentStageProgress: 0,
             message: 'جاري رفع الملف...'
         }));
 
         try {
+            // Step 1: Start async upload
             const formData = new FormData();
             formData.append('manga', mangaId);
             formData.append('number', chapterNumber);
@@ -300,7 +317,7 @@ function AddChapterModal({
             formData.append('release_date', releaseDate);
             formData.append('file', file);
 
-            const res = await fetch(`${API_URL}/chapters/upload/`, {
+            const res = await fetch(`${API_URL}/chapters/upload-async/`, {
                 method: 'POST',
                 headers: {
                     ...getAuthHeaders()
@@ -310,17 +327,74 @@ function AddChapterModal({
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || 'فشل رفع الفصل');
+                throw new Error(data.error || 'فشل بدء عملية الرفع');
             }
 
             const data = await res.json();
+            const uploadJobId = data.job_id;
+            setJobId(uploadJobId);
+
+            // Update to extraction stage
             setUploadState(prev => ({
                 ...prev,
-                status: 'success',
-                message: `تم رفع ${data.images_count || 0} صورة بنجاح!`
+                currentStage: 0,
+                currentStageProgress: 100,
+                message: 'تم استخراج الصور من ZIP'
             }));
 
-            setTimeout(onSuccess, 1000);
+            // Step 2: Poll for progress
+            const pollInterval = setInterval(async () => {
+                try {
+                    const progressRes = await fetch(
+                        `${API_URL}/chapters/upload-progress/${uploadJobId}/`,
+                        {
+                            headers: getAuthHeaders()
+                        }
+                    );
+
+                    if (!progressRes.ok) {
+                        throw new Error('فشل الحصول على حالة الرفع');
+                    }
+
+                    const progressData = await progressRes.json();
+
+                    // Update progress
+                    setUploadState(prev => ({
+                        ...prev,
+                        currentStage: 1, // Upload stage
+                        currentStageProgress: progressData.percentage || 0,
+                        status: progressData.status === 'completed' ? 'success' :
+                            progressData.status === 'failed' ? 'error' : 'uploading',
+                        message: progressData.status === 'completed'
+                            ? `تم رفع ${progressData.completed} صورة بنجاح!`
+                            : `جاري رفع الصور... (${progressData.completed}/${progressData.total})`,
+                        error: progressData.error || ''
+                    }));
+
+                    // Check if completed or failed
+                    if (progressData.status === 'completed') {
+                        clearInterval(pollInterval);
+                        setLoading(false);
+                        setTimeout(() => {
+                            onSuccess();
+                        }, 1500);
+                    } else if (progressData.status === 'failed') {
+                        clearInterval(pollInterval);
+                        setLoading(false);
+                        throw new Error(progressData.error || 'فشلت عملية الرفع');
+                    }
+
+                } catch (pollError: any) {
+                    clearInterval(pollInterval);
+                    setLoading(false);
+                    setUploadState(prev => ({
+                        ...prev,
+                        status: 'error',
+                        error: pollError.message
+                    }));
+                    setError(pollError.message);
+                }
+            }, 500); // Poll every 500ms
 
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الرفع');
@@ -329,7 +403,6 @@ function AddChapterModal({
                 status: 'error',
                 error: err.message
             }));
-        } finally {
             setLoading(false);
         }
     }
@@ -408,12 +481,15 @@ function AddChapterModal({
                         </div>
                     </div>
 
-                    {/* Simple Progress */}
-                    {uploadState.status !== 'idle' && (
-                        <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4 text-blue-400">
-                            {uploadState.message || 'جاري الرفع...'}
-                        </div>
-                    )}
+                    {/* Enhanced Upload Progress */}
+                    <EnhancedUploadProgress
+                        stages={uploadState.stages}
+                        currentStage={uploadState.currentStage}
+                        currentStageProgress={uploadState.currentStageProgress}
+                        status={uploadState.status}
+                        message={uploadState.message}
+                        error={uploadState.error}
+                    />
 
                     {error && uploadState.status === 'idle' && (
                         <div className="bg-red-900/30 border border-red-600 rounded-lg p-3 text-red-400">
