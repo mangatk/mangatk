@@ -1,48 +1,26 @@
-// // /** @type {import('next').NextConfig} */
-// // const nextConfig = {};
-
-// // export default nextConfig;
-// /** @type {import('next').NextConfig} */
-// const nextConfig = {
-//   // تجاهل أخطاء التايب سكريبت لمنع توقف الرفع
-//   typescript: {
-//     ignoreBuildErrors: true,
-//   },
-//   // تجاهل أخطاء ESLint لمنع توقف الرفع
-//   eslint: {
-//     ignoreDuringBuilds: true,
-//   },
-//   // إعدادات الصور (اختياري، اتركها لضمان عدم حدوث مشاكل مع الصور الخارجية)
-//   images: {
-//     remotePatterns: [
-//       {
-//         protocol: "https",
-//         hostname: "**",
-//       },
-//     ],
-//   },
-//   // Allow larger file uploads
-//   api: {
-//     bodyParser: {
-//       sizeLimit: '500mb',
-//     },
-//     responseLimit: '500mb',
-//   },
-//   experimental: {
-//     serverActions: {
-//       bodySizeLimit: '500mb',
-//     },
-//   },
-// };
-
-// export default nextConfig;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
+  // إذا صورك من دومينات كثيرة ومحتار: الحل الأسرع هو تعطيل optimization
+  // (بدل محاولة السماح لكل الدومينات)
+  images: {
+    unoptimized: true,
+  },
+
+  experimental: {
+    serverActions: {
+      // تقدر ترفعها، لكن تذكر: Vercel عندها حد payload 4.5MB غالبًا
+      bodySizeLimit: "4mb",
+    },
+  },
+
   async rewrites() {
     return [
       {
-        source: "/api/:path*",
-        destination: "https://YOUR-BACKEND.onrender.com/api/:path*",
+        source: "/backend/:path*",
+        destination: `${process.env.BACKEND_ORIGIN}/:path*`,
       },
     ];
   },
