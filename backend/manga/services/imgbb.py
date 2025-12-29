@@ -16,38 +16,55 @@ class ImgBBService:
         This prevents corrupted images caused by Base64 encoding errors.
         """
         try:
-            # إعداد البيانات الأساسية
-            payload = {
-                'key': cls.API_KEY,
-            }
-            if name:
-                payload['name'] = name
-
+            # Validate API key
+            if not cls.API_KEY:
+                print("Error: IMGBB_API_KEY is not set in settings")
+                return None
+            
+            # Prepare file for upload
             files = {}
-
+            
             # التعامل مع الملف سواء كان مساراً (string) أو ملفاً مفتوحاً
             if isinstance(image_file, str):
                 if not os.path.exists(image_file):
                     print(f"File not found: {image_file}")
                     return None
                 # نفتح الملف في وضع القراءة الثنائية (Binary)
-                # ونتركه مفتوحاً ليقوم requests بإدارته
-                files = {
-                    'image': open(image_file, 'rb')
-                }
+                files = {'image': open(image_file, 'rb')}
             else:
-                # إذا كان كائناً بالفعل (مثل InMemoryUploadedFile)
+                # إذا كان كائناً بالفعل (مثل InMemoryUploadedFile أو BytesIO)
+                # تأكد من أن المؤشر في البداية
+                if hasattr(image_file, 'seek'):
+                    image_file.seek(0)
                 files = {'image': image_file}
             
-            # عملية الرفع (بدون Base64) - أكثر استقراراً وسرعة
-            # زدنا المهلة إلى 300 ثانية
-            response = requests.post(cls.API_URL, data=payload, files=files, timeout=300)
+            # إعداد البيانات - فقط key (لا name في data)
+            data = {
+                'key': cls.API_KEY,
+            }
+            
+            # أضف name كمعامل منفصل إذا كان موجوداً
+            if name:
+                data['name'] = name
+            
+            # عملية الرفع
+            response = requests.post(
+                cls.API_URL, 
+                data=data, 
+                files=files, 
+                timeout=300
+            )
             
             # إغلاق الملف إذا قمنا بفتحه
             if isinstance(image_file, str) and 'image' in files:
                 files['image'].close()
 
-            response.raise_for_status()
+            # Check response
+            if response.status_code != 200:
+                error_detail = response.text[:200] if response.text else 'No error details'
+                print(f"ImgBB API Error {response.status_code}: {error_detail}")
+                response.raise_for_status()
+            
             result = response.json()
             
             if result.get('success'):
@@ -61,7 +78,9 @@ class ImgBBService:
                     'size': data.get('size'),
                     'title': data.get('title', name)
                 }
-            return None
+            else:
+                print(f"ImgBB upload failed: {result.get('error', {}).get('message', 'Unknown error')}")
+                return None
             
         except Exception as e:
             print(f"Error uploading image to ImgBB: {e}")

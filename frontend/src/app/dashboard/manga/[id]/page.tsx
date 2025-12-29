@@ -266,8 +266,8 @@ function AddChapterModal({
     // Enhanced progress state for EnhancedUploadProgress
     const [uploadState, setUploadState] = useState({
         stages: [
-            { name: 'استخراج الصور من ZIP', weight: 10 },
-            { name: 'رفع الصور إلى ImgBB', weight: 90 }
+            { name: 'رفع الملف إلى الخادم', weight: 20 },
+            { name: 'رفع الصور إلى ImgBB', weight: 80 }
         ],
         currentStage: 0,
         currentStageProgress: 0,
@@ -309,7 +309,6 @@ function AddChapterModal({
         }));
 
         try {
-            // Step 1: Start async upload
             const formData = new FormData();
             formData.append('manga', mangaId);
             formData.append('number', chapterNumber);
@@ -317,32 +316,71 @@ function AddChapterModal({
             formData.append('release_date', releaseDate);
             formData.append('file', file);
 
-            const res = await fetch(`${API_URL}/chapters/upload-async/`, {
-                method: 'POST',
-                headers: {
-                    ...getAuthHeaders()
-                },
-                body: formData,
+            const token = localStorage.getItem('manga_token');
+
+            // Use XMLHttpRequest for upload progress tracking
+            const data = await new Promise<any>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // Track file upload progress (first stage)
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        setUploadState(prev => ({
+                            ...prev,
+                            currentStage: 0, // File upload stage
+                            currentStageProgress: percentComplete,
+                            status: 'uploading',
+                            message: `جاري رفع الملف... ${percentComplete}%`
+                        }));
+                    }
+                });
+
+                // Handle completion
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+
+                            // File uploaded successfully, move to ImgBB upload stage
+                            setUploadState(prev => ({
+                                ...prev,
+                                currentStage: 1, // ImgBB upload stage
+                                currentStageProgress: 0,
+                                message: 'تم رفع الملف، جاري معالجة الصور...'
+                            }));
+
+                            resolve(response);
+                        } catch (e) {
+                            reject(new Error('فشل في قراءة الاستجابة'));
+                        }
+                    } else {
+                        let errorMessage = `فشل الرفع: ${xhr.status}`;
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            errorMessage = errorResponse.error || errorMessage;
+                        } catch (e) {
+                            // Ignore if response is not JSON
+                        }
+                        reject(new Error(errorMessage));
+                    }
+                });
+
+                // Handle errors
+                xhr.addEventListener('error', () => {
+                    reject(new Error('حدث خطأ أثناء الرفع'));
+                });
+
+                // Open and send request
+                xhr.open('POST', `${API_URL}/chapters/upload-async/`);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send(formData);
             });
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || 'فشل بدء عملية الرفع');
-            }
-
-            const data = await res.json();
             const uploadJobId = data.job_id;
             setJobId(uploadJobId);
 
-            // Update to extraction stage
-            setUploadState(prev => ({
-                ...prev,
-                currentStage: 0,
-                currentStageProgress: 100,
-                message: 'تم استخراج الصور من ZIP'
-            }));
-
-            // Step 2: Poll for progress
+            // Poll for ImgBB upload progress
             const pollInterval = setInterval(async () => {
                 try {
                     const progressRes = await fetch(
@@ -358,16 +396,16 @@ function AddChapterModal({
 
                     const progressData = await progressRes.json();
 
-                    // Update progress
+                    // Update ImgBB upload progress
                     setUploadState(prev => ({
                         ...prev,
-                        currentStage: 1, // Upload stage
+                        currentStage: 1, // ImgBB upload stage
                         currentStageProgress: progressData.percentage || 0,
                         status: progressData.status === 'completed' ? 'success' :
                             progressData.status === 'failed' ? 'error' : 'uploading',
                         message: progressData.status === 'completed'
                             ? `تم رفع ${progressData.completed} صورة بنجاح!`
-                            : `جاري رفع الصور... (${progressData.completed}/${progressData.total})`,
+                            : `جاري رفع الصور إلى ImgBB... (${progressData.completed}/${progressData.total})`,
                         error: progressData.error || ''
                     }));
 
