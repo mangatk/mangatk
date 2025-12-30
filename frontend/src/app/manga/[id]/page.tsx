@@ -9,6 +9,8 @@ import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { ProxyImage } from '@/components/ProxyImage';
+import { OneSignalToast } from '@/components/OneSignalToast';
+import { Toaster } from 'react-hot-toast';
 import {
   FaBookOpen, FaStar, FaUser, FaClock, FaLayerGroup,
   FaSearch, FaSortAmountDown, FaSortAmountUp, FaHeart, FaRegHeart
@@ -152,6 +154,8 @@ export default function MangaDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12 transition-colors duration-300">
+      <Toaster />
+      <OneSignalToast showOnMount={true} delay={3000} />
 
       <Header />
 
