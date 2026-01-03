@@ -7,6 +7,8 @@ from . import translation_endpoints
 from . import async_chapter_upload
 from . import translate_dashboard_views
 from . import user_translation_views
+from . import zip_analysis
+from . import subscription_views
 from .views import register_fcm_token
 from .views import onesignal_test
 
@@ -35,12 +37,17 @@ urlpatterns = [
     path('chapters/upload-progress/<str:job_id>/', async_chapter_upload.get_upload_progress, name='chapter-upload-progress'),
     path('chapters/cancel-upload/<str:job_id>/', async_chapter_upload.cancel_upload, name='chapter-cancel-upload'),
     path('chapters/<uuid:chapter_id>/upload-status/', async_chapter_upload.get_chapter_upload_progress, name='chapter-upload-status'),
+    path('chapters/analyze-zip/', zip_analysis.analyze_zip_file, name='analyze-zip'),
     
     # Auth endpoints (JWT)
     path('auth/login/', auth_views.login_view, name='auth-login'),
     path('auth/register/', auth_views.register_view, name='auth-register'),
     path('auth/refresh/', auth_views.refresh_token_view, name='auth-refresh'),
     path('auth/profile/', auth_views.profile_view, name='auth-profile'),
+    
+    # Subscription endpoints
+    path('subscriptions/<uuid:plan_id>/subscribe/', subscription_views.subscribe_to_plan, name='subscribe-to-plan'),
+    path('subscriptions/current/', subscription_views.get_current_subscription, name='current-subscription'),
     
     # AI Translation endpoints (Admin)
     path('translation/ai-models/', translation_views.ai_models_view, name='ai-models-list'),

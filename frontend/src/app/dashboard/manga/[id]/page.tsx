@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FaArrowRight, FaPlus, FaEdit, FaTrash, FaUpload, FaImages } from 'react-icons/fa';
+import { FaArrowRight, FaPlus, FaEdit, FaTrash, FaUpload, FaImages, FaChevronDown } from 'react-icons/fa';
 import { ProxyImage } from '@/components/ProxyImage';
 import { EnhancedUploadProgress } from '@/components/EnhancedUploadProgress';
+import { MultiChapterUploadModal } from '@/components/MultiChapterUploadModal';
+import { parseChapterFileName } from '@/utils/chapterFileParser';
 import { useAuth } from '@/context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -38,6 +40,8 @@ export default function MangaDetailPage() {
     const [manga, setManga] = useState<MangaDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [showAddChapter, setShowAddChapter] = useState(false);
+    const [showMultiChapter, setShowMultiChapter] = useState(false);
+    const [showUploadMenu, setShowUploadMenu] = useState(false);
 
     useEffect(() => {
         fetchManga();
@@ -157,12 +161,40 @@ export default function MangaDetailPage() {
                     <h2 className="text-xl font-bold text-white">
                         الفصول ({manga.chapters?.length || 0})
                     </h2>
-                    <button
-                        onClick={() => setShowAddChapter(true)}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                        <FaPlus /> إضافة فصل
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowUploadMenu(!showUploadMenu)}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <FaPlus /> إضافة فصل <FaChevronDown className="text-sm" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showUploadMenu && (
+                            <div className="absolute left-0 mt-2 w-56 bg-gray-700 rounded-lg shadow-lg border border-gray-600 overflow-hidden z-10">
+                                <button
+                                    onClick={() => {
+                                        setShowAddChapter(true);
+                                        setShowUploadMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-right text-white hover:bg-gray-600 transition-colors flex items-center gap-2"
+                                >
+                                    <FaPlus className="text-sm" />
+                                    إضافة فصل واحد
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowMultiChapter(true);
+                                        setShowUploadMenu(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-right text-white hover:bg-gray-600 transition-colors flex items-center gap-2 border-t border-gray-600"
+                                >
+                                    <FaImages className="text-sm" />
+                                    رفع فصول متعددة
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Chapters List */}
@@ -239,6 +271,19 @@ export default function MangaDetailPage() {
                     }}
                 />
             )}
+
+            {/* Multi Chapter Upload Modal */}
+            {showMultiChapter && (
+                <MultiChapterUploadModal
+                    mangaId={mangaId}
+                    mangaTitle={manga.title}
+                    onClose={() => setShowMultiChapter(false)}
+                    onSuccess={() => {
+                        setShowMultiChapter(false);
+                        fetchManga();
+                    }}
+                />
+            )}
         </div>
     );
 }
@@ -262,6 +307,28 @@ function AddChapterModal({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [jobId, setJobId] = useState<string | null>(null);
+
+    // Handle file selection and auto-fill chapter info
+    function handleFileChange(selectedFile: File | null) {
+        setFile(selectedFile);
+
+        if (selectedFile) {
+            // Parse file name to extract chapter info
+            const parsed = parseChapterFileName(selectedFile.name);
+
+            // Auto-fill chapter number if not already set or if empty
+            if (!chapterNumber || chapterNumber === '') {
+                setChapterNumber(parsed.number);
+            }
+
+            // Auto-fill chapter title if not already set or if empty
+            if (!chapterTitle || chapterTitle === '') {
+                // Use parsed title if available, otherwise use manga title + chapter number
+                const autoTitle = parsed.title || `${mangaTitle} - الفصل ${parsed.number}`;
+                setChapterTitle(autoTitle);
+            }
+        }
+    }
 
     // Enhanced progress state for EnhancedUploadProgress
     const [uploadState, setUploadState] = useState({
@@ -494,7 +561,7 @@ function AddChapterModal({
                             <input
                                 type="file"
                                 accept=".zip,.cbz"
-                                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                                 className="hidden"
                                 id="chapter-file"
                                 disabled={loading}

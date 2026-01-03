@@ -431,7 +431,7 @@ def publish_translated_chapter(request):
                         logger.error(f"Error uploading page {img_data.get('page_number', '?')}: {e}")
                 
                 # Clean up temporary directory
-                TranslationService.cleanup_job_files(str(job.id))
+                TranslationService.cleanup_job(str(job.id))
                 
                 # Mark as completed
                 job.status = 'published'
