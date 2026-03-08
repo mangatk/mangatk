@@ -34,10 +34,10 @@ export function ProxyImage({
     onError,
     onClick
 }: ProxyImageProps) {
-    // Detect if we should instantly proxy blocked domains
-    const isBlockedDomain = src && (src.includes('ibb.co') || src.includes('imgur.com'));
-    const initialIndex = isBlockedDomain ? 0 : -1;
-    const getInitialSrc = () => isBlockedDomain ? `${PROXY_URLS[0]}${encodeURIComponent(src)}` : src;
+    // Start by assuming the image can be loaded directly from its source url
+    // If it fails (due to regional blocking), the handleImageError will pick it up
+    const initialIndex = -1;
+    const getInitialSrc = () => src;
 
     const [currentSrc, setCurrentSrc] = useState(getInitialSrc());
     const [proxyIndex, setProxyIndex] = useState(initialIndex);

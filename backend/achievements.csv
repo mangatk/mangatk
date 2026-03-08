@@ -1,0 +1,12 @@
+id,slug,name,name_ar,description,icon_url,category,rarity,requirement_type,requirement_value,reward_points,is_secret,is_active,created_at
+66cc53ff-8ed0-4f51-b8ea-923f11d1a100,read_1,First Step,بداية الرحلة,قرأت أول فصل لك,,reading,common,chapters_read,1,10,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a101,read_10,Bookworm,دودة كتب,قرأت 10 فصول,,reading,common,chapters_read,10,50,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a102,read_50,Avid Reader,قارئ نهم,قرأت 50 فصلاً,,reading,rare,chapters_read,50,150,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a103,read_100,True Otaku,أوتاكو حقيقي,قرأت 100 فصل,,reading,epic,chapters_read,100,500,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a104,read_1000,Pirate King,ملك القراصنة,قرأت 1000 فصل! أنت أسطورة!,,reading,legendary,chapters_read,1000,5000,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a105,time_1m,Quick Glance,نظرة سريعة,قضيت دقيقة واحدة,,time,common,time_spent_seconds,60,5,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a106,time_1h,High Focus,تركيز عالي,ساعة من القراءة,,time,rare,time_spent_seconds,3600,100,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a107,time_24h,Manga Addict,مدمن مانجا,يوم كامل في الموقع,,time,epic,time_spent_seconds,86400,1000,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a108,fav_10,Collector,جامع التحف,10 مانجات في المفضلة,,collection,rare,favorites_count,10,100,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a109,com_100,Influencer,المؤثر,100 تعليق,,social,epic,comments_count,100,500,False,True,2024-01-01 00:00:00
+66cc53ff-8ed0-4f51-b8ea-923f11d1a110,secret_night,Night Owl,ساهر الليل,قراءة بعد 3 فجراً,,secret,epic,night_reading,1,300,True,True,2024-01-01 00:00:00
