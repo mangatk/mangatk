@@ -161,7 +161,7 @@ class MangaDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manga
         fields = [
-            'id', 'title', 'sub_titles', 'slug', 'description', 'author',
+            'id', 'title', 'sub_titles', 'slug', 'description', 'author', 'artist',
             'cover_image_url', 'banner_image_url', 'has_banner', 'is_featured',
             'status', 'story_type', 'avg_rating', 'views', 'genres', 'category', 'chapters', 'chapter_count',
             'created_at', 'updated_at', 'last_updated'

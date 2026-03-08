@@ -25,6 +25,7 @@ export default function EditMangaPage() {
         title: '',
         sub_titles: '',
         author: '',
+        artist: '',
         description: '',
         status: 'ongoing',
         story_type: 'manhwa',
@@ -59,6 +60,7 @@ export default function EditMangaPage() {
                     title: manga.title || '',
                     sub_titles: manga.sub_titles || '',
                     author: manga.author || '',
+                    artist: manga.artist || '',
                     description: manga.description || '',
                     status: manga.status || 'ongoing',
                     story_type: manga.story_type || 'manhwa',
@@ -187,6 +189,12 @@ export default function EditMangaPage() {
                                     <div>
                                         <label className="block text-gray-300 mb-2">المؤلف</label>
                                         <input type="text" value={formData.author} onChange={(e) => setFormData({ ...formData, author: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-300 mb-2">الرسام</label>
+                                        <input type="text" value={formData.artist}
+                                            onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500" />
                                     </div>
                                     <div>
                                         <label className="block text-gray-300 mb-2">تاريخ النشر</label>

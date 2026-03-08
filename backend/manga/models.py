@@ -109,6 +109,7 @@ class Manga(models.Model):
     slug = models.SlugField(max_length=300, unique=True, blank=True)
     description = models.TextField(blank=True)
     author = models.CharField(max_length=200, blank=True)
+    artist = models.CharField(max_length=200, blank=True)
     
     cover_image_url = models.URLField(max_length=500, blank=True)
     banner_image_url = models.URLField(max_length=500, blank=True)

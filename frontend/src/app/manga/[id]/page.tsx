@@ -252,6 +252,12 @@ export default function MangaDetail() {
                 <FaUser className="text-blue-500" />
                 <span className="text-gray-700 dark:text-gray-300">{manga.author}</span>
               </div>
+              {manga.artist && (
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+                  <span className="text-pink-500 font-bold">🖌️</span>
+                  <span className="text-gray-700 dark:text-gray-300">{manga.artist}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
                 <FaStar className="text-yellow-400 text-lg" />
                 <span className="text- gray-900 dark:text-white font-bold">{manga.avgRating}</span>

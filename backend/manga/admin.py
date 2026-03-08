@@ -53,22 +53,20 @@ class ChapterInline(admin.TabularInline):
 @admin.register(Manga)
 class MangaAdmin(admin.ModelAdmin):
     """Admin interface for Manga model"""
-    list_display = [
-        'title', 'author', 'status', 'story_type', 'avg_rating', 
-        'views', 'chapter_count', 'cover_preview', 'last_updated'
-    ]
-    list_filter = ['status', 'story_type', 'category', 'genres', 'created_at']
-    search_fields = ['title', 'sub_titles', 'author', 'description']
-    filter_horizontal = ['genres']
+    list_display = ['title', 'author', 'artist', 'status', 'story_type', 'is_featured', 'chapter_count', 'views', 'created_at']
+    list_filter = ['status', 'story_type', 'is_featured', 'category', 'genres']
+    search_fields = ['title', 'sub_titles', 'author', 'artist', 'description']
     prepopulated_fields = {'slug': ('title',)}
+    autocomplete_fields = ['genres', 'category']
+    date_hierarchy = 'created_at'
     readonly_fields = [
         'id', 'slug', 'chapter_count', 'avg_rating', 'last_updated',
         'created_at', 'updated_at', 'cover_preview_large'
     ]
     
-    fieldsets = (
+    fieldsets = [
         ('Basic Information', {
-            'fields': ('title', 'sub_titles', 'slug', 'author', 'description')
+            'fields': ['title', 'sub_titles', 'slug', 'description', 'author', 'artist']
         }),
         ('Cover Image', {
             'fields': ('cover_image_url', 'cover_preview_large')
@@ -83,7 +81,7 @@ class MangaAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
-    )
+    ]
     
     inlines = [ChapterInline]
     

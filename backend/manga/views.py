@@ -27,6 +27,7 @@ class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
+    pagination_class = None
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -41,6 +42,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
+    pagination_class = None
 
 
 class SubscriptionPlanViewSet(viewsets.ModelViewSet):

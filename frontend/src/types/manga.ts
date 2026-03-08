@@ -10,6 +10,7 @@ export interface Manga {
   genres: string[];
   status: 'ongoing' | 'completed';
   lastUpdated: string;
+  artist?: string;
   author: string;
   story_type: string;
   views: number;
