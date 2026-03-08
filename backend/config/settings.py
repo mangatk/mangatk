@@ -209,8 +209,8 @@ IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 IMGBB_API_URL = 'https://api.imgbb.com/1/upload'
 
 # Add Auth0 variables at the bottom
-AUTH0_DOMAIN = os.getenv('YOUR_AUTH0_DOMAIN') # Get from Auth0 Dashboard
-AUTH0_AUDIENCE = os.getenv('YOUR_AUTH0_API_IDENTIFIER') # Get from Auth0 Dashboard
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', os.getenv('YOUR_AUTH0_DOMAIN')) # Get from Auth0 Dashboard
+AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', os.getenv('YOUR_AUTH0_API_IDENTIFIER', 'https://mangatk')) # Get from Auth0 Dashboard
 
 
 # backend/config/settings.py
