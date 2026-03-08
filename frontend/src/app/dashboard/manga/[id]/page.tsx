@@ -345,6 +345,49 @@ function AddChapterModal({
 
     const { getAuthHeaders } = useAuth();
 
+    // Check for active upload session on mount
+    useEffect(() => {
+        const uploadSessionKey = `upload_session_${mangaId}`;
+        const savedSession = localStorage.getItem(uploadSessionKey);
+
+        if (savedSession) {
+            try {
+                const session = JSON.parse(savedSession);
+                // Check if session is less than 24 hours old
+                const sessionAge = Date.now() - session.startedAt;
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+                if (sessionAge < maxAge && session.jobId) {
+                    // Resume upload progress display
+                    setJobId(session.jobId);
+                    setChapterNumber(session.chapterNumber);
+                    setChapterTitle(session.chapterTitle || '');
+                    setLoading(true);
+                    setUploadState({
+                        stages: [
+                            { name: 'رفع الملف إلى الخادم', weight: 20 },
+                            { name: 'رفع الصور إلى ImgBB', weight: 80 }
+                        ],
+                        currentStage: 1, // Already in ImgBB stage
+                        currentStageProgress: 0,
+                        status: 'uploading',
+                        message: 'استئناف عرض التقدم...',
+                        error: ''
+                    });
+
+                    // Start polling immediately
+                    resumeProgressPolling(session.jobId);
+                } else {
+                    // Session too old, remove it
+                    localStorage.removeItem(uploadSessionKey);
+                }
+            } catch (e) {
+                console.error('Error loading upload session:', e);
+                localStorage.removeItem(uploadSessionKey);
+            }
+        }
+    }, [mangaId]);
+
     // Cleanup polling interval on unmount
     useEffect(() => {
         return () => {
@@ -357,6 +400,67 @@ function AddChapterModal({
             }
         };
     }, [jobId]);
+
+    // Function to resume progress polling
+    function resumeProgressPolling(uploadJobId: string) {
+        const pollInterval = setInterval(async () => {
+            try {
+                const progressRes = await fetch(
+                    `${API_URL}/chapters/upload-progress/${uploadJobId}/`,
+                    {
+                        headers: getAuthHeaders()
+                    }
+                );
+
+                if (!progressRes.ok) {
+                    throw new Error('فشل الحصول على حالة الرفع');
+                }
+
+                const progressData = await progressRes.json();
+
+                // Update ImgBB upload progress
+                setUploadState(prev => ({
+                    ...prev,
+                    currentStage: 1,
+                    currentStageProgress: progressData.percentage || 0,
+                    status: progressData.status === 'completed' ? 'success' :
+                        progressData.status === 'failed' ? 'error' : 'uploading',
+                    message: progressData.status === 'completed'
+                        ? `تم رفع ${progressData.completed} صورة بنجاح!`
+                        : `جاري رفع الصور إلى ImgBB... (${progressData.completed}/${progressData.total})`,
+                    error: progressData.error || ''
+                }));
+
+                // Check if completed or failed
+                if (progressData.status === 'completed') {
+                    clearInterval(pollInterval);
+                    setLoading(false);
+                    // Clear upload session
+                    localStorage.removeItem(`upload_session_${mangaId}`);
+                    setTimeout(() => {
+                        onSuccess();
+                    }, 1500);
+                } else if (progressData.status === 'failed') {
+                    clearInterval(pollInterval);
+                    setLoading(false);
+                    // Clear upload session
+                    localStorage.removeItem(`upload_session_${mangaId}`);
+                    throw new Error(progressData.error || 'فشلت عملية الرفع');
+                }
+
+            } catch (pollError: any) {
+                clearInterval(pollInterval);
+                setLoading(false);
+                localStorage.removeItem(`upload_session_${mangaId}`);
+                setUploadState(prev => ({
+                    ...prev,
+                    status: 'error',
+                    error: pollError.message
+                }));
+                setError(pollError.message);
+            }
+        }, 500);
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -447,6 +551,16 @@ function AddChapterModal({
             const uploadJobId = data.job_id;
             setJobId(uploadJobId);
 
+            // Save upload session to localStorage
+            const uploadSession = {
+                jobId: uploadJobId,
+                mangaId: mangaId,
+                chapterNumber: chapterNumber,
+                chapterTitle: chapterTitle || `${mangaTitle} - الفصل ${chapterNumber}`,
+                startedAt: Date.now()
+            };
+            localStorage.setItem(`upload_session_${mangaId}`, JSON.stringify(uploadSession));
+
             // Poll for ImgBB upload progress
             const pollInterval = setInterval(async () => {
                 try {
@@ -480,18 +594,24 @@ function AddChapterModal({
                     if (progressData.status === 'completed') {
                         clearInterval(pollInterval);
                         setLoading(false);
+                        // Clear upload session from localStorage
+                        localStorage.removeItem(`upload_session_${mangaId}`);
                         setTimeout(() => {
                             onSuccess();
                         }, 1500);
                     } else if (progressData.status === 'failed') {
                         clearInterval(pollInterval);
                         setLoading(false);
+                        // Clear upload session from localStorage
+                        localStorage.removeItem(`upload_session_${mangaId}`);
                         throw new Error(progressData.error || 'فشلت عملية الرفع');
                     }
 
                 } catch (pollError: any) {
                     clearInterval(pollInterval);
                     setLoading(false);
+                    // Clear upload session from localStorage
+                    localStorage.removeItem(`upload_session_${mangaId}`);
                     setUploadState(prev => ({
                         ...prev,
                         status: 'error',

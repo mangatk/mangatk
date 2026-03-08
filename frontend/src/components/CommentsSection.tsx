@@ -68,15 +68,25 @@ function CommentItem({
       <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
-          {comment.user_avatar ? (
-            <ProxyImage
-              src={comment.user_avatar}
-              alt={comment.user_name}
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <FaUserCircle className="w-10 h-10 text-gray-500" />
-          )}
+          <div className="relative w-10 h-10">
+            {comment.user_equipped_achievement_icon ? (
+              <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden shadow-md border-2 border-yellow-400/50">
+                <ProxyImage
+                  src={comment.user_equipped_achievement_icon}
+                  alt="Achievement"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : comment.user_avatar ? (
+              <ProxyImage
+                src={comment.user_avatar}
+                alt={comment.user_name}
+                className="w-full h-full rounded-full"
+              />
+            ) : (
+              <FaUserCircle className="w-full h-full text-gray-500" />
+            )}
+          </div>
 
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -238,7 +248,7 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, getAuthHeaders } = useAuth();
 
   // State
   const [comments, setComments] = useState<Comment[]>([]);
@@ -269,9 +279,9 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
     try {
       let data: Comment[];
       if (chapterId) {
-        data = await commentsAPI.getCommentsByChapter(chapterId);
+        data = await commentsAPI.getCommentsByChapter(chapterId, getAuthHeaders() as HeadersInit);
       } else if (mangaId) {
-        data = await commentsAPI.getCommentsByManga(mangaId);
+        data = await commentsAPI.getCommentsByManga(mangaId, getAuthHeaders() as HeadersInit);
       } else {
         setError('No chapter or manga ID provided');
         return;
@@ -296,7 +306,7 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
         content: newComment.trim(),
         chapter_id: chapterId,
         manga_id: mangaId
-      });
+      }, getAuthHeaders() as HeadersInit);
 
       setComments(prev => [newCommentData, ...prev]);
       setNewComment('');
@@ -317,7 +327,7 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
         chapter_id: chapterId,
         manga_id: mangaId,
         parent: parentId
-      });
+      }, getAuthHeaders() as HeadersInit);
 
       setComments(prev => addReplyToComment(prev, parentId, newReply));
       setReplyText('');
@@ -333,7 +343,7 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
     if (!editText.trim()) return;
 
     try {
-      await commentsAPI.updateComment(commentId, editText.trim());
+      await commentsAPI.updateComment(commentId, editText.trim(), getAuthHeaders() as HeadersInit);
 
       setComments(prev => updateCommentContent(prev, commentId, editText.trim()));
       setEditingId(null);
@@ -347,7 +357,7 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
     if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
 
     try {
-      await commentsAPI.deleteComment(commentId);
+      await commentsAPI.deleteComment(commentId, getAuthHeaders() as HeadersInit);
       setComments(prev => removeComment(prev, commentId));
     } catch (err: any) {
       setError(err.message || 'Failed to delete comment');
@@ -358,7 +368,7 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
     if (!isAuthenticated) return;
 
     try {
-      const result = await commentsAPI.toggleLike(commentId);
+      const result = await commentsAPI.toggleLike(commentId, getAuthHeaders() as HeadersInit);
       setComments(prev => updateCommentLikes(prev, commentId, result.likes_count));
     } catch (err: any) {
       setError(err.message || 'Failed to like comment');

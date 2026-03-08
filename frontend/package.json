@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.15.0",
     "aos": "^2.3.4",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.544.0",

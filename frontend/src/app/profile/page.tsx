@@ -26,7 +26,7 @@ interface ReplyNotification {
 }
 
 export default function ProfilePage() {
-   const { user, logout, isLoading: authLoading, getAuthHeaders } = useAuth();
+   const { user, login, logout, isLoading: authLoading, getAuthHeaders } = useAuth();
    const { bookmarks, history } = useStorage();
    const { unlockedIds } = useAchievements();
    const router = useRouter();
@@ -49,12 +49,12 @@ export default function ProfilePage() {
    const [replyText, setReplyText] = useState('');
 
    // اللقب المجهز
-   const [equippedTitle, setEquippedTitle] = useState<{ id: string; title: string; rarity: string } | null>(null);
+   const [equippedTitle, setEquippedTitle] = useState<{ id: string; title: string; rarity: string; iconUrl?: string } | null>(null);
 
    // حماية الصفحة وجلب البيانات
    useEffect(() => {
       if (!authLoading && !user) {
-         router.push('/login');
+         login();
          return;
       }
 
@@ -79,7 +79,7 @@ export default function ProfilePage() {
                   const savedAch = ALL_ACHIEVEMENTS.find(a => a.id === data.equipped_title || a.title === data.equipped_title);
                   if (savedAch) {
                      setEquippedTitle({ id: savedAch.id, title: savedAch.title, rarity: savedAch.rarity });
-                     localStorage.setItem('equipped_title', savedAch.id);
+                     localStorage.setItem('equipped_title', savedAch.title);
                      localStorage.setItem('equipped_title_name', savedAch.title);
                      localStorage.setItem('equipped_title_rarity', savedAch.rarity);
                   } else {
@@ -90,8 +90,9 @@ export default function ProfilePage() {
                   const titleId = localStorage.getItem('equipped_title');
                   const titleName = localStorage.getItem('equipped_title_name');
                   const titleRarity = localStorage.getItem('equipped_title_rarity');
+                  const titleIcon = localStorage.getItem('equipped_title_icon');
                   if (titleId && titleName) {
-                     setEquippedTitle({ id: titleId, title: titleName, rarity: titleRarity || 'common' });
+                     setEquippedTitle({ id: titleId, title: titleName, rarity: titleRarity || 'common', iconUrl: titleIcon || '' });
                   }
                }
             })
@@ -265,8 +266,15 @@ export default function ProfilePage() {
 
                         {/* عرض اللقب المختار */}
                         {equippedTitle && (
-                           <div className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold text-white mb-1 bg-gradient-to-r ${RARITY_COLORS[equippedTitle.rarity as keyof typeof RARITY_COLORS] || 'from-gray-500 to-gray-600'} shadow-sm animate-in fade-in slide-in-from-left-2`}>
-                              {equippedTitle.title}
+                           <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-left-2">
+                              {equippedTitle.iconUrl && (
+                                 <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 shadow-sm border border-gray-200 dark:border-gray-700">
+                                    <ProxyImage src={equippedTitle.iconUrl} alt={equippedTitle.title} className="w-full h-full object-cover" />
+                                 </div>
+                              )}
+                              <div className={`px-2 py-0.5 rounded text-[10px] font-bold text-white bg-gradient-to-r ${RARITY_COLORS[equippedTitle.rarity as keyof typeof RARITY_COLORS] || 'from-gray-500 to-gray-600'} shadow-sm`}>
+                                 {equippedTitle.title}
+                              </div>
                            </div>
                         )}
 
@@ -382,20 +390,29 @@ export default function ProfilePage() {
                                     onClick={async () => {
                                        if (isUnlocked) {
                                           // حفظ اللقب محلياً
-                                          localStorage.setItem('equipped_title', achId);
+                                          localStorage.setItem('equipped_title', ach.id);
                                           localStorage.setItem('equipped_title_name', achTitle);
                                           localStorage.setItem('equipped_title_rarity', ach.rarity || 'common');
-                                          setEquippedTitle({ id: achId, title: achTitle, rarity: ach.rarity || 'common' });
+                                          if (ach.icon_url) localStorage.setItem('equipped_title_icon', ach.icon_url);
+                                          setEquippedTitle({ id: ach.id, title: achTitle, rarity: ach.rarity || 'common', iconUrl: ach.icon_url });
 
                                           // مزامنة مع API
                                           try {
-                                             await fetch(`${API_URL}/auth/profile/`, {
+                                             await fetch(`${API_URL}/achievements/${ach.id}/equip/`, {
+                                                method: 'POST',
+                                                headers: {
+                                                   'Content-Type': 'application/json',
+                                                   ...getAuthHeaders(),
+                                                }
+                                             });
+                                             // Also update legacy title for backward compatibility
+                                             fetch(`${API_URL}/auth/profile/`, {
                                                 method: 'PATCH',
                                                 headers: {
                                                    'Content-Type': 'application/json',
                                                    ...getAuthHeaders(),
                                                 },
-                                                body: JSON.stringify({ equipped_title: achId }),
+                                                body: JSON.stringify({ equipped_title: achTitle }),
                                              });
                                           } catch (err) {
                                              console.error('Error syncing equipped title:', err);

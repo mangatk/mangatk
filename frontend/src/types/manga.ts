@@ -11,6 +11,7 @@ export interface Manga {
   status: 'ongoing' | 'completed';
   lastUpdated: string;
   author: string;
+  story_type: string;
   views: number;
   category: string;
   banner_image_url?: string; // Optional banner image for featured manga
@@ -28,6 +29,7 @@ export interface FilterState {
   query?: string;
   status?: string;
   categories?: string[];
+  type?: string;
   // التعديل هنا: جعلناها string لتقبل القيم القادمة من القوائم المنسدلة مثل "Latest Chapter"
   sortBy?: string;
 }

@@ -101,6 +101,7 @@ class Category(models.Model):
 
 class Manga(models.Model):
     STATUS_CHOICES = [('ongoing', 'Ongoing'), ('completed', 'Completed')]
+    TYPE_CHOICES = [('manga', 'Manga'), ('manhwa', 'Manhwa'), ('manhua', 'Manhua'), ('comic', 'Comic')]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=300)
@@ -113,6 +114,7 @@ class Manga(models.Model):
     banner_image_url = models.URLField(max_length=500, blank=True)
     is_featured = models.BooleanField(default=False, help_text="يظهر في البنر الرئيسي")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
+    story_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='manhwa')
     views = models.PositiveIntegerField(default=0)
     
     genres = models.ManyToManyField(Genre, related_name='mangas', blank=True)
@@ -150,10 +152,15 @@ class Manga(models.Model):
         
     @property
     def chapter_count(self):
+        if hasattr(self, 'annotated_chapter_count'):
+            return self.annotated_chapter_count
         return self.chapters.count()
     
     @property
     def avg_rating(self):
+        if hasattr(self, 'annotated_avg_rating'):
+            avg = self.annotated_avg_rating
+            return round(avg, 1) if avg else 0.0
         avg = self.chapters.aggregate(Avg('ratings__rating'))['ratings__rating__avg']
         return round(avg, 1) if avg else 0.0
 
@@ -207,11 +214,16 @@ class Chapter(models.Model):
         
     @property
     def image_count(self):
+        if hasattr(self, 'annotated_image_count'):
+            return self.annotated_image_count
         return self.images.count()
     
     @property
     def avg_rating(self):
         """Calculate average rating for this chapter"""
+        if hasattr(self, 'annotated_avg_rating'):
+            avg = self.annotated_avg_rating
+            return round(avg, 1) if avg else 0.0
         avg = self.ratings.aggregate(Avg('rating'))['rating__avg']
         return round(avg, 1) if avg else 0.0
     
@@ -247,6 +259,14 @@ class User(AbstractUser):
     avatar_url = models.URLField(max_length=500, blank=True)
     bio = models.TextField(max_length=500, blank=True)
     equipped_title = models.CharField(max_length=100, blank=True, help_text="اللقب المجهز من الإنجازات")
+    equipped_achievement = models.ForeignKey(
+        'Achievement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='equipped_by_users',
+        help_text="الإنجاز المجهز ليظهر فوق صورة الحساب"
+    )
     
     # Reading Stats
     total_reading_time = models.PositiveIntegerField(default=0)
@@ -563,6 +583,27 @@ class Achievement(models.Model):
         blank=True,
         related_name='achievements',
         help_text="If set, this achievement is for completing/reading this specific manga"
+    )
+    
+    target_category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='achievements',
+        help_text="If set, this achievement is for reading mangas in this specific category"
+    )
+    
+    active_from = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="If set, the achievement can only be earned after this date/time"
+    )
+    
+    active_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="If set, the achievement can only be earned before this date/time"
     )
     
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Carousel } from '@/components/Carousel';
@@ -22,6 +22,7 @@ interface Filters {
   query?: string;
   status?: string;
   categories?: string[];
+  sortBy?: string;
 }
 
 // Category titles (keeping for UI)
@@ -171,7 +172,7 @@ export default function Home() {
     try {
       setLoadingMore(true);
       const nextPage = currentPage + 1;
-      const response = await getMangaList(nextPage, 20);
+      const response = await getMangaList(nextPage, 20, currentFilters);
 
       setAllManga(prev => [...prev, ...response.results]);
       setFilteredManga(prev => [...prev, ...response.results]);
@@ -184,49 +185,43 @@ export default function Home() {
     }
   };
 
-  // Filtering logic
+  const isInitialMount = useRef(true);
+
+  // Server-side filtering logic
   useEffect(() => {
-    let filtered = [...allManga];
-
-    if (currentFilters.query) {
-      filtered = filtered.filter(manga =>
-        manga.title.toLowerCase().includes(currentFilters.query?.toLowerCase() || '') ||
-        manga.description.toLowerCase().includes(currentFilters.query?.toLowerCase() || '')
-      );
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
 
-    if (currentFilters.status && currentFilters.status !== 'All') {
-      filtered = filtered.filter(manga => {
-        if (currentFilters.status === 'Completed') return manga.status === 'completed';
-        if (currentFilters.status === 'Ongoing') return manga.status === 'ongoing';
-        return true;
-      });
+    async function fetchFiltered() {
+      setLoading(true);
+      try {
+        const response = await getMangaList(1, 20, currentFilters);
+        setAllManga(response.results);
+        setFilteredManga(response.results);
+        setTotalCount(response.count);
+        setHasMore(response.next !== null);
+        setCurrentPage(1);
+      } catch (err) {
+        console.error('Error fetching filtered manga:', err);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    if (currentFilters.categories && currentFilters.categories.length > 0) {
-      filtered = filtered.filter(manga => {
-        // Check if filter matches genre names
-        const matchesGenre = manga.genres.some(genre =>
-          currentFilters.categories?.includes(genre)
-        );
-        // Check if filter matches category slug
-        const matchesCategory = currentFilters.categories?.includes(manga.category);
-        return matchesGenre || matchesCategory;
-      });
-    }
-
-    setFilteredManga(filtered);
-  }, [currentFilters, allManga]);
+    fetchFiltered();
+  }, [currentFilters]);
 
   const handleFilter = (filters: Filters) => setCurrentFilters(filters);
-  const handleSort = () => { };
+  const handleSort = (order: string) => setCurrentFilters(prev => ({ ...prev, sortBy: order }));
   const handleCategorySelect = (cat: string) => handleFilter({ categories: [cat] });
 
   const clearFilters = () => {
     setCurrentFilters({});
   };
 
-  const hasActiveFilters = currentFilters.query || (currentFilters.status && currentFilters.status !== 'All') || (currentFilters.categories && currentFilters.categories.length > 0);
+  const hasActiveFilters = currentFilters.query || (currentFilters.status && currentFilters.status !== 'All') || (currentFilters.categories && currentFilters.categories.length > 0) || (currentFilters.sortBy && currentFilters.sortBy !== 'Name');
   const lastRead = history.length > 0 ? history[0] : null;
 
   // Loading state
@@ -248,9 +243,7 @@ export default function Home() {
       <div id="main-content">
 
         {/* Hero Section - Always show Carousel */}
-        {!hasActiveFilters && (
-          <Carousel mangaList={featuredManga.length > 0 ? featuredManga : allManga.slice(0, 5)} />
-        )}
+        <Carousel mangaList={featuredManga.length > 0 ? featuredManga : allManga.slice(0, 5)} />
 
         <QuickMenu />
 

@@ -130,7 +130,7 @@ class MangaListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'sub_titles', 'slug', 'description', 'author',
             'cover_image_url', 'banner_image_url', 'has_banner', 'is_featured',
-            'status', 'avg_rating', 'views', 'genres', 'category', 'chapter_count', 'last_updated'
+            'status', 'story_type', 'avg_rating', 'views', 'genres', 'category', 'chapter_count', 'last_updated'
         ]
         read_only_fields = ['id', 'slug']
     
@@ -163,7 +163,7 @@ class MangaDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'sub_titles', 'slug', 'description', 'author',
             'cover_image_url', 'banner_image_url', 'has_banner', 'is_featured',
-            'status', 'avg_rating', 'views', 'genres', 'category', 'chapters', 'chapter_count',
+            'status', 'story_type', 'avg_rating', 'views', 'genres', 'category', 'chapters', 'chapter_count',
             'created_at', 'updated_at', 'last_updated'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
@@ -205,7 +205,7 @@ class MangaCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manga
         fields = [
-            'id', 'title', 'sub_titles', 'description', 'author', 'status',
+            'id', 'title', 'sub_titles', 'description', 'author', 'status', 'story_type',
             'avg_rating', 'views', 'genre_ids', 'genres', 'category_id', 'category',
             'cover_image', 'cover_image_url', 'banner_image', 'banner_image_url', 'is_featured'
         ]
@@ -397,7 +397,8 @@ class RatingSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer for comments on manga/chapters"""
     user_name = serializers.CharField(source='user.username', read_only=True)
-    user_avatar = serializers.CharField(source='user.avatar_url', read_only=True)
+    user_avatar = serializers.SerializerMethodField()
+    user_equipped_achievement_icon = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
     
     # Nested objects for dashboard display
@@ -426,7 +427,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'comment_type', 'manga', 'chapter', 'manga_id', 'chapter_id',
             'content', 'parent', 'likes_count', 'user', 'user_name', 'user_avatar',
-            'created_at', 'is_edited', 'is_deleted', 'replies'
+            'user_equipped_achievement_icon', 'created_at', 'is_edited', 'is_deleted', 'replies'
         ]
         read_only_fields = ['id', 'likes_count', 'created_at', 'is_edited', 'comment_type']
     
@@ -435,6 +436,14 @@ class CommentSerializer(serializers.ModelSerializer):
             'id': str(obj.user.id),
             'username': obj.user.username
         }
+        
+    def get_user_avatar(self, obj):
+        return getattr(obj.user, 'avatar_url', getattr(obj.user, 'picture', None))
+        
+    def get_user_equipped_achievement_icon(self, obj):
+        if getattr(obj.user, 'equipped_achievement', None):
+            return obj.user.equipped_achievement.icon_url
+        return None
     
     def get_manga(self, obj):
         # Try direct manga, or get from chapter
@@ -472,13 +481,16 @@ class CommentLikeSerializer(serializers.ModelSerializer):
 class AchievementSerializer(serializers.ModelSerializer):
     """Serializer for achievements"""
     target_manga_title = serializers.CharField(source='target_manga.title', read_only=True, allow_null=True)
+    target_category_name = serializers.CharField(source='target_category.name', read_only=True, allow_null=True)
+    icon_file = serializers.ImageField(write_only=True, required=False)
     
     class Meta:
         model = Achievement
         fields = [
             'id', 'slug', 'name', 'name_ar', 'description', 'icon_url',
             'category', 'rarity', 'requirement_type', 'requirement_value',
-            'reward_points', 'is_secret', 'is_active', 'target_manga', 'target_manga_title'
+            'reward_points', 'is_secret', 'is_active', 'target_manga', 'target_manga_title',
+            'target_category', 'target_category_name', 'active_from', 'active_until', 'icon_file'
         ]
 
 

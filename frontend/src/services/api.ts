@@ -59,6 +59,7 @@ function mapMangaData(item: any): Manga {
     status: item.status,
     lastUpdated: item.last_updated,
     author: item.author || 'Unknown',
+    story_type: item.story_type || 'manhwa',
     views: item.views || 0,
     // التعامل مع الفئة (Category) سواء كانت كائن كامل أو مجرد Slug
     category: typeof item.category === 'object' && item.category !== null ? item.category.slug : item.category,
@@ -88,6 +89,11 @@ export async function getMangaList(page: number = 1, pageSize: number = 20, filt
     params.append('status', filters.status.toLowerCase());
   }
 
+  // Create mapping for type correctly
+  if (filters?.type && filters.type !== 'All') {
+    params.append('type', filters.type.toLowerCase());
+  }
+
   // دعم تصفية الأنواع (Genres)
   if (filters?.categories && filters.categories.length > 0) {
     filters.categories.forEach(cat => params.append('genre', cat));
@@ -96,9 +102,9 @@ export async function getMangaList(page: number = 1, pageSize: number = 20, filt
   if (filters?.sortBy) {
     const sortMap: Record<string, string> = {
       'Name': 'title',
-      'Latest Chapter': '-last_updated',
+      'Latest Chapter': '-latest_chapter_date',
       'Most Popular': '-views',
-      'Rating': '-avg_rating',
+      'Rating': '-annotated_avg_rating',
     };
     params.append('ordering', sortMap[filters.sortBy] || '-last_updated');
   }

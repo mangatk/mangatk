@@ -7,9 +7,10 @@ import { FaSun, FaMoon, FaSignOutAlt } from 'react-icons/fa';
 import { SearchBar } from './SearchBar';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementToast } from './AchievementToast';
+import { ProxyImage } from './ProxyImage';
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, login, register, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -86,8 +87,14 @@ export function Header() {
                   onClick={() => setMenuOpen(!menuOpen)}
                   className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all relative z-50"
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold">
-                    {user.name ? user.name[0].toUpperCase() : 'U'}
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold relative">
+                    {user.equipped_achievement_icon ? (
+                      <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden">
+                        <ProxyImage src={user.equipped_achievement_icon} alt="Achievement" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      user.name ? user.name[0].toUpperCase() : 'U'
+                    )}
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block max-w-[100px] truncate">
                     {user.name}
@@ -135,12 +142,12 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 font-medium text-sm hidden sm:block">
+                <button onClick={() => login()} className="text-gray-700 dark:text-gray-300 hover:text-blue-600 font-medium text-sm hidden sm:block">
                   دخول
-                </Link>
-                <Link href="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
+                </button>
+                <button onClick={() => register()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
                   تسجيل
-                </Link>
+                </button>
               </div>
             )}
           </div>

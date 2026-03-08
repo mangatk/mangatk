@@ -27,6 +27,7 @@ export default function EditMangaPage() {
         author: '',
         description: '',
         status: 'ongoing',
+        story_type: 'manhwa',
         publish_date: ''
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -60,6 +61,7 @@ export default function EditMangaPage() {
                     author: manga.author || '',
                     description: manga.description || '',
                     status: manga.status || 'ongoing',
+                    story_type: manga.story_type || 'manhwa',
                     publish_date: manga.publish_date || ''
                 });
                 setCoverPreview(manga.cover_image_url || '');
@@ -118,7 +120,7 @@ export default function EditMangaPage() {
             const res = await fetch(`${API_URL}/manga/${mangaId}/`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, cover_image_url: coverUrl, banner_image_url: bannerUrl, genres: selectedGenres, category: selectedCategory || null }),
+                body: JSON.stringify({ ...formData, cover_image_url: coverUrl, banner_image_url: bannerUrl, genres: selectedGenres, category: selectedCategory || null, story_type: formData.story_type }),
             });
 
             if (!res.ok) {
@@ -195,6 +197,15 @@ export default function EditMangaPage() {
                                         <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500">
                                             <option value="ongoing">مستمر</option>
                                             <option value="completed">مكتمل</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-300 mb-2">النوع (Type)</label>
+                                        <select value={formData.story_type} onChange={(e) => setFormData({ ...formData, story_type: e.target.value })} className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500">
+                                            <option value="manga">مانجا (ياباني)</option>
+                                            <option value="manhwa">مانهوا (كوري)</option>
+                                            <option value="manhua">مانها (صيني)</option>
+                                            <option value="comic">كوميك (عالمي)</option>
                                         </select>
                                     </div>
                                 </div>

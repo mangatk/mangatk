@@ -32,6 +32,7 @@ export default function AddMangaPage() {
         author: '',
         description: '',
         status: 'ongoing',
+        story_type: 'manhwa',
         publish_date: '',
     });
     const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -139,6 +140,7 @@ export default function AddMangaPage() {
                     banner_image_url: bannerUrl,
                     genres: selectedGenres,
                     category: selectedCategory || null,
+                    story_type: formData.story_type,
                 }),
             });
 
@@ -238,6 +240,17 @@ export default function AddMangaPage() {
                                             className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500">
                                             <option value="ongoing">مستمر</option>
                                             <option value="completed">مكتمل</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-300 mb-2">النوع (Type)</label>
+                                        <select value={formData.story_type}
+                                            onChange={(e) => setFormData({ ...formData, story_type: e.target.value })}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500">
+                                            <option value="manga">مانجا (ياباني)</option>
+                                            <option value="manhwa">مانهوا (كوري)</option>
+                                            <option value="manhua">مانها (صيني)</option>
+                                            <option value="comic">كوميك (عالمي)</option>
                                         </select>
                                     </div>
                                 </div>

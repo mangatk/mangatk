@@ -2,6 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 
 // تعريف شكل بيانات المستخدم
 interface User {
@@ -12,13 +13,14 @@ interface User {
   is_superuser?: boolean;
   points?: number;
   equipped_title?: string; // اللقب المجهز من الإنجازات
+  equipped_achievement_icon?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email?: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  register: (username?: string, email?: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -30,26 +32,80 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const {
+    isAuthenticated: auth0IsAuthenticated,
+    isLoading: auth0IsLoading,
+    user: auth0User,
+    getAccessTokenSilently,
+    loginWithRedirect,
+    logout: auth0Logout,
+  } = useAuth0();
+
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(true);
 
-  // عند تحميل الموقع، نتأكد هل هناك مستخدم محفوظ في المتصفح؟
   useEffect(() => {
-    const savedUser = localStorage.getItem('manga_user');
-    const savedToken = localStorage.getItem('manga_token');
-    const savedRefresh = localStorage.getItem('manga_refresh');
+    let isMounted = true;
 
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-      setToken(savedToken);
-      setRefreshToken(savedRefresh);
-    }
-    setIsLoading(false);
-  }, []);
+    const syncUser = async () => {
+      if (auth0IsLoading) {
+        setIsSyncing(true);
+        return;
+      }
 
-  // دالة للحصول على headers المصادقة
+      if (!auth0IsAuthenticated) {
+        if (isMounted) {
+          setUser(null);
+          setToken(null);
+          setIsSyncing(false);
+        }
+        return;
+      }
+
+      try {
+        const accessToken = await getAccessTokenSilently();
+
+        if (isMounted) setToken(accessToken);
+
+        // Fetch our custom user profile from Django backend
+        const res = await fetch(`${API_URL}/auth/profile/`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setUser({
+              id: data.id,
+              name: auth0User?.nickname || auth0User?.name || auth0User?.email?.split('@')[0] || data.username,
+              email: auth0User?.email || data.email,
+              is_staff: data.is_staff,
+              is_superuser: data.is_superuser,
+              points: data.points,
+              equipped_title: data.equipped_title,
+              equipped_achievement_icon: data.equipped_achievement_icon,
+            });
+          }
+        } else {
+          console.error('Failed to sync user profile from backend');
+        }
+      } catch (error) {
+        console.error('Error fetching Auth0 token or syncing profile:', error);
+      } finally {
+        if (isMounted) setIsSyncing(false);
+      }
+    };
+
+    syncUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auth0IsAuthenticated, auth0IsLoading, getAccessTokenSilently, auth0User]);
+
   const getAuthHeaders = () => {
     if (token) {
       return { Authorization: `Bearer ${token}` };
@@ -57,161 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   };
 
-  // تحديث التوكن تلقائياً قبل انتهاء صلاحيته
-  const refreshAccessToken = async () => {
-    if (!refreshToken) return false;
-
-    try {
-      const res = await fetch(`${API_URL}/auth/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshToken }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setToken(data.access);
-        setRefreshToken(data.refresh);
-        localStorage.setItem('manga_token', data.access);
-        localStorage.setItem('manga_refresh', data.refresh);
-        return true;
-      }
-    } catch (error) {
-      console.error('Token refresh error:', error);
-    }
-    return false;
+  const login = async (): Promise<{ success: boolean; error?: string }> => {
+    await loginWithRedirect();
+    return { success: true };
   };
 
-  // دالة تسجيل الدخول - تتصل بالـ Backend
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await fetch(`${API_URL}/auth/login/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        const userData: User = {
-          id: data.user?.id,
-          name: data.user?.username || email.split('@')[0],
-          email: data.user?.email || email,
-          is_staff: data.user?.is_staff || false,
-          is_superuser: data.user?.is_superuser || false,
-          points: data.user?.points || 100,
-          equipped_title: data.user?.equipped_title,
-        };
-
-        // تصفية بيانات المستخدم القديم إذا كان مختلف
-        const oldUser = localStorage.getItem('manga_user');
-        if (oldUser) {
-          const oldUserData = JSON.parse(oldUser);
-          if (oldUserData.id !== userData.id) {
-            // حذف بيانات المستخدم القديم
-            localStorage.removeItem('manga_bookmarks');
-            localStorage.removeItem('manga_history');
-            localStorage.removeItem('unlocked_achievements');
-            localStorage.removeItem('total_reading_seconds');
-            localStorage.removeItem('equipped_title');
-            localStorage.removeItem('equipped_title_name');
-            localStorage.removeItem('equipped_title_rarity');
-            // Clear rating and comment localStorage
-            Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('rating_') || key.startsWith('comments_')) {
-                localStorage.removeItem(key);
-              }
-            });
-          }
-        }
-
-        // حفظ بيانات المستخدم والـ tokens
-        setUser(userData);
-        setToken(data.tokens?.access);
-        setRefreshToken(data.tokens?.refresh);
-
-        localStorage.setItem('manga_user', JSON.stringify(userData));
-        localStorage.setItem('manga_token', data.tokens?.access || '');
-        localStorage.setItem('manga_refresh', data.tokens?.refresh || '');
-
-        return { success: true };
+  const register = async (): Promise<{ success: boolean; error?: string }> => {
+    await loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'signup',
       }
-
-      return { success: false, error: data.error || 'بيانات الدخول غير صحيحة' };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'خطأ في الاتصال بالخادم' };
-    }
+    });
+    return { success: true };
   };
 
-  // دالة إنشاء حساب جديد
-  const register = async (username: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await fetch(`${API_URL}/auth/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        const userData: User = {
-          id: data.user?.id,
-          name: data.user?.username || username,
-          email: data.user?.email || email,
-          is_staff: data.user?.is_staff || false,
-          is_superuser: data.user?.is_superuser || false,
-          points: data.user?.points || 100, // New users get 100 points
-          equipped_title: data.user?.equipped_title,
-        };
-
-        // Clear any previous user data for fresh start
-        localStorage.removeItem('manga_bookmarks');
-        localStorage.removeItem('manga_history');
-        localStorage.removeItem('unlocked_achievements');
-        localStorage.removeItem('total_reading_seconds');
-        localStorage.removeItem('equipped_title');
-        localStorage.removeItem('equipped_title_name');
-        localStorage.removeItem('equipped_title_rarity');
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('rating_') || key.startsWith('comments_')) {
-            localStorage.removeItem(key);
-          }
-        });
-
-        // حفظ بيانات المستخدم والـ tokens
-        setUser(userData);
-        setToken(data.tokens?.access);
-        setRefreshToken(data.tokens?.refresh);
-
-        localStorage.setItem('manga_user', JSON.stringify(userData));
-        localStorage.setItem('manga_token', data.tokens?.access || '');
-        localStorage.setItem('manga_refresh', data.tokens?.refresh || '');
-
-        return { success: true };
-      }
-
-      return { success: false, error: data.error || 'فشل إنشاء الحساب' };
-    } catch (error) {
-      console.error('Register error:', error);
-      return { success: false, error: 'خطأ في الاتصال بالخادم' };
-    }
-  };
-
-  // دالة تسجيل الخروج - تحذف كل بيانات المستخدم
   const logout = () => {
-    setUser(null);
-    setToken(null);
-    setRefreshToken(null);
-
-    // حذف بيانات المصادقة
-    localStorage.removeItem('manga_user');
-    localStorage.removeItem('manga_token');
-    localStorage.removeItem('manga_refresh');
-
-    // حذف بيانات المستخدم الخاصة
+    // Clear custom local storage items
     localStorage.removeItem('manga_bookmarks');
     localStorage.removeItem('manga_history');
     localStorage.removeItem('unlocked_achievements');
@@ -219,6 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('equipped_title');
     localStorage.removeItem('equipped_title_name');
     localStorage.removeItem('equipped_title_rarity');
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('rating_') || key.startsWith('comments_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    auth0Logout({ logoutParams: { returnTo: typeof window !== 'undefined' ? window.location.origin : '' } });
   };
 
   return (
@@ -228,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
-      isLoading,
+      isLoading: auth0IsLoading || isSyncing,
       isAuthenticated: !!user && !!token,
       getAuthHeaders
     }}>
@@ -237,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// دالة خطافية (Hook) لاستخدام السياق بسهولة
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

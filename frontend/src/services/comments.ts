@@ -9,6 +9,7 @@ export interface Comment {
     id: string;
     user_name: string;
     user_avatar?: string;
+    user_equipped_achievement_icon?: string;
     content: string;
     likes_count: number;
     created_at: string;
@@ -27,25 +28,19 @@ export interface CreateCommentData {
 }
 
 /**
- * Get authentication headers
- */
-function getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('manga_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
-/**
  * Get comments for a chapter
  */
-export async function getCommentsByChapter(chapterId: string): Promise<Comment[]> {
+export async function getCommentsByChapter(chapterId: string, authHeaders: HeadersInit = {}): Promise<Comment[]> {
     const res = await fetch(`${API_URL}/comments/?chapter=${chapterId}`, {
         headers: {
-            ...getAuthHeaders()
+            ...authHeaders
         }
     });
 
     if (!res.ok) {
-        throw new Error('Failed to load comments');
+        let errorText = await res.text();
+        console.error('getCommentsByChapter backend error:', res.status, errorText);
+        throw new Error(`Failed to load comments: ${errorText}`);
     }
 
     const data = await res.json();
@@ -56,15 +51,17 @@ export async function getCommentsByChapter(chapterId: string): Promise<Comment[]
 /**
  * Get comments for a manga
  */
-export async function getCommentsByManga(mangaId: string): Promise<Comment[]> {
+export async function getCommentsByManga(mangaId: string, authHeaders: HeadersInit = {}): Promise<Comment[]> {
     const res = await fetch(`${API_URL}/comments/?manga=${mangaId}`, {
         headers: {
-            ...getAuthHeaders()
+            ...authHeaders
         }
     });
 
     if (!res.ok) {
-        throw new Error('Failed to load comments');
+        let errorText = await res.text();
+        console.error('getCommentsByManga backend error:', res.status, errorText);
+        throw new Error(`Failed to load comments: ${errorText}`);
     }
 
     const data = await res.json();
@@ -75,12 +72,12 @@ export async function getCommentsByManga(mangaId: string): Promise<Comment[]> {
 /**
  * Create a new comment
  */
-export async function createComment(data: CreateCommentData): Promise<Comment> {
+export async function createComment(data: CreateCommentData, authHeaders: HeadersInit = {}): Promise<Comment> {
     const res = await fetch(`${API_URL}/comments/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            ...getAuthHeaders()
+            ...authHeaders
         },
         body: JSON.stringify(data)
     });
@@ -96,12 +93,12 @@ export async function createComment(data: CreateCommentData): Promise<Comment> {
 /**
  * Update a comment
  */
-export async function updateComment(id: string, content: string): Promise<Comment> {
+export async function updateComment(id: string, content: string, authHeaders: HeadersInit = {}): Promise<Comment> {
     const res = await fetch(`${API_URL}/comments/${id}/`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
-            ...getAuthHeaders()
+            ...authHeaders
         },
         body: JSON.stringify({ content })
     });
@@ -117,11 +114,11 @@ export async function updateComment(id: string, content: string): Promise<Commen
 /**
  * Delete a comment (soft delete)
  */
-export async function deleteComment(id: string): Promise<void> {
+export async function deleteComment(id: string, authHeaders: HeadersInit = {}): Promise<void> {
     const res = await fetch(`${API_URL}/comments/${id}/`, {
         method: 'DELETE',
         headers: {
-            ...getAuthHeaders()
+            ...authHeaders
         }
     });
 
@@ -134,11 +131,11 @@ export async function deleteComment(id: string): Promise<void> {
 /**
  * Toggle like on a comment
  */
-export async function toggleLike(id: string): Promise<{ liked: boolean; likes_count: number }> {
+export async function toggleLike(id: string, authHeaders: HeadersInit = {}): Promise<{ liked: boolean; likes_count: number }> {
     const res = await fetch(`${API_URL}/comments/${id}/like/`, {
         method: 'POST',
         headers: {
-            ...getAuthHeaders()
+            ...authHeaders
         }
     });
 

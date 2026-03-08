@@ -37,6 +37,8 @@ def upload_for_preview(request):
     
     Request:
         - file: ملف ZIP/CBZ
+        - source_language: لغة المصدر (chinese, japanese, korean, english)
+        - target_language: لغة الهدف (arabic)
         
     Response:
         - job_id: معرف العملية
@@ -47,11 +49,27 @@ def upload_for_preview(request):
     """
     
     file = request.FILES.get('file')
+    source_language = request.data.get('source_language', '')
+    target_language = request.data.get('target_language', 'arabic')  # دائمًا عربي
     
     if not file:
         return Response({
             'error': 'لم يتم تحديد ملف'
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate language selection
+    if not source_language:
+        return Response({
+            'error': 'يجب اختيار لغة المصدر'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    valid_languages = ['chinese', 'japanese', 'korean', 'english']
+    if source_language not in valid_languages:
+        return Response({
+            'error': f'لغة غير مدعومة. اللغات المتاحة: {", ".join(valid_languages)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    logger.info(f"Admin translation request: {source_language} -> {target_language}")
     
     # Validate file
     is_valid, error_msg = TranslationService.validate_archive(file)

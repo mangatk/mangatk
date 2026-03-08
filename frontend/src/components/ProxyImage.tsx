@@ -32,13 +32,18 @@ export function ProxyImage({
     onError,
     onClick
 }: ProxyImageProps) {
-    const [currentSrc, setCurrentSrc] = useState(src);
-    const [proxyIndex, setProxyIndex] = useState(-1);
+    // Detect if we should instantly proxy blocked domains
+    const isBlockedDomain = src && (src.includes('ibb.co') || src.includes('imgur.com'));
+    const initialIndex = isBlockedDomain ? 0 : -1;
+    const getInitialSrc = () => isBlockedDomain ? `${PROXY_URLS[0]}${encodeURIComponent(src)}` : src;
+
+    const [currentSrc, setCurrentSrc] = useState(getInitialSrc());
+    const [proxyIndex, setProxyIndex] = useState(initialIndex);
     const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
-        setCurrentSrc(src);
-        setProxyIndex(-1);
+        setCurrentSrc(getInitialSrc());
+        setProxyIndex(initialIndex);
         setHasError(false);
     }, [src]);
 

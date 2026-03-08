@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { FaUpload, FaDownload, FaRobot, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import ChapterPreview, { ViewMode } from '@/components/ChapterPreview';
+import { useAuth } from '@/context/AuthContext';
+import { Header } from '@/components/Header';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -24,6 +26,7 @@ interface TranslationJob {
 }
 
 export default function TranslatePage() {
+    const { user, isAuthenticated } = useAuth();
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [currentJob, setCurrentJob] = useState<TranslationJob | null>(null);
@@ -32,6 +35,10 @@ export default function TranslatePage() {
     const [polling, setPolling] = useState(false);
     const [userPoints, setUserPoints] = useState<number | null>(null);
     const [requiredPoints] = useState(20); // التكلفة الثابتة
+
+    // Language selection states
+    const [sourceLanguage, setSourceLanguage] = useState<string>('');
+    const targetLanguage = 'arabic'; // ثابت على العربية
 
     // Fetch user points on mount
     useEffect(() => {
@@ -86,8 +93,19 @@ export default function TranslatePage() {
     };
 
     const handleUpload = async () => {
+        if (!user) {
+            setError('يجب تسجيل الدخول لاستخدام المترجم');
+            return;
+        }
+
         if (!file) {
             setError('يرجى اختيار ملف');
+            return;
+        }
+
+        // Validate language selection
+        if (!sourceLanguage) {
+            setError('يرجى اختيار لغة المصدر قبل الترجمة');
             return;
         }
 
@@ -97,6 +115,8 @@ export default function TranslatePage() {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('source_language', sourceLanguage);
+        formData.append('target_language', targetLanguage);
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -255,11 +275,13 @@ export default function TranslatePage() {
         return Math.round((currentJob.translated_pages / currentJob.total_pages) * 100);
     };
 
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4">
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-12">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300"> {/* Changed div class */}
+            <Header /> {/* Added Header component */}
+            <div className="container mx-auto px-4 py-8"> {/* Changed div class */}
+                {/* Header Section */}
+                <div className="text-center mb-8"> {/* Changed mb-12 to mb-8 */}
                     <h1 className="text-5xl font-bold text-white mb-4 flex items-center justify-center gap-3">
                         <FaRobot className="text-blue-400" />
                         ترجمة المانجا بالذكاء الاصطناعي
@@ -284,6 +306,48 @@ export default function TranslatePage() {
                     <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-gray-700 p-8 mb-8">
                         <div className="flex flex-col items-center">
                             <div className="w-full max-w-2xl">
+                                {/* Language Selection */}
+                                <div className="mb-8 bg-blue-900/20 border border-blue-600/30 rounded-xl p-6">
+                                    <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+                                        <span className="text-blue-400">⚠️</span>
+                                        اختيار اللغة (ضروري للترجمة)
+                                    </h3>
+                                    <p className="text-gray-400 text-sm mb-4">
+                                        يجب اختيار لغة المصدر الصحيحة للحصول على أفضل نتائج الترجمة
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Source Language */}
+                                        <div>
+                                            <label className="block text-gray-300 text-sm font-medium mb-2">
+                                                من (لغة المصدر) *
+                                            </label>
+                                            <select
+                                                value={sourceLanguage}
+                                                onChange={(e) => setSourceLanguage(e.target.value)}
+                                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                                required
+                                            >
+                                                <option value="">اختر لغة المصدر</option>
+                                                <option value="chinese">🇨🇳 صيني</option>
+                                                <option value="japanese">🇯🇵 ياباني</option>
+                                                <option value="korean">🇰🇷 كوري</option>
+                                                <option value="english">🇬🇧 إنجليزي</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Target Language (Fixed) */}
+                                        <div>
+                                            <label className="block text-gray-300 text-sm font-medium mb-2">
+                                                إلى (لغة الهدف)
+                                            </label>
+                                            <div className="w-full bg-gray-800 border border-gray-600 rounded-lg py-3 px-4 text-gray-400 flex items-center gap-2">
+                                                <span className="text-xl">🇸🇦</span>
+                                                <span>عربي (ثابت)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <label className="block text-gray-300 text-lg font-semibold mb-4 text-center">
                                     اختر ملف الفصل
                                 </label>

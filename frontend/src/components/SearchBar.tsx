@@ -24,8 +24,8 @@ export function SearchBar({ onSearch }: SearchBarProps) {
         setLoading(true);
         try {
           // جلب النتائج من السيرفر
-          const data = await getMangaList({ query: query });
-          setResults(data.slice(0, 5)); // عرض أول 5 نتائج فقط
+          const response = await getMangaList(1, 5, { query: query });
+          setResults(response.results); // عرض أول 5 نتائج فقط
           setIsOpen(true);
         } catch (error) {
           console.error("Search error:", error);

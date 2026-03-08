@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/context/AuthContext';
-// Removed mocks
+import { ProxyImage } from '@/components/ProxyImage';
 import { CommentsSection } from '@/components/CommentsSection';
 import { ChapterRating } from '@/components/ChapterRating';
 import { useReadingTime } from '@/hooks/useReadingTime';
@@ -256,11 +256,10 @@ export default function ReaderPage() {
               {chapter.images.map((img, idx) => (
                 <div key={img.id} className="w-full relative min-h-[200px] bg-gray-800/50">
                   {/* نستخدم loading="eager" للصور الأولى لسرعة العرض */}
-                  <img
+                  <ProxyImage
                     src={img.url}
                     alt={`Page ${idx + 1}`}
                     className="w-full h-auto block"
-                    loading={idx < 2 ? "eager" : "lazy"}
                   />
                 </div>
               ))}
@@ -275,11 +274,10 @@ export default function ReaderPage() {
                 <div className="absolute inset-0 flex items-center justify-center z-0">
                   <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
                 </div>
-                <img
+                <ProxyImage
                   src={chapter.images[currentPage]?.url}
                   alt={`Page ${currentPage + 1}`}
                   className="relative z-10 max-h-[calc(100vh-80px)] max-w-full object-contain shadow-2xl"
-                  style={{ maxWidth: `${width}px` }}
                 />
               </div>
 
@@ -303,10 +301,10 @@ export default function ReaderPage() {
           {mode === 'double' && (
             <div className="flex items-center justify-center h-[calc(100vh-64px)] w-full space-x-1 relative">
               {chapter.images[currentPage] && (
-                <img src={chapter.images[currentPage].url} className="max-h-[calc(100vh-80px)] w-1/2 object-contain" />
+                <ProxyImage src={chapter.images[currentPage].url} className="max-h-[calc(100vh-80px)] w-1/2 object-contain" alt="Page 1" />
               )}
               {chapter.images[currentPage + 1] && (
-                <img src={chapter.images[currentPage + 1].url} className="max-h-[calc(100vh-80px)] w-1/2 object-contain" />
+                <ProxyImage src={chapter.images[currentPage + 1].url} className="max-h-[calc(100vh-80px)] w-1/2 object-contain" alt="Page 2" />
               )}
 
               {/* مناطق النقر المخفية */}

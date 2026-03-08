@@ -11,8 +11,8 @@ import { FaHeart, FaHeartBroken } from 'react-icons/fa';
 import { MangaCardSkeleton } from '@/components/Skeleton';
 
 export default function FavoritesPage() {
-    const { user } = useAuth();
-    const { favorites, removeFavorite } = useStorage();
+    const { user, isLoading: isLoadingAuth } = useAuth();
+    const { bookmarks: favorites, toggleBookmark: removeFavorite, isStorageLoaded } = useStorage();
     const [favoriteManga, setFavoriteManga] = useState<Manga[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -27,6 +27,8 @@ export default function FavoritesPage() {
                 setLoading(true);
                 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+                if (!isStorageLoaded) return; // Wait for initial load
+
                 if (favorites.length === 0) {
                     setFavoriteManga([]);
                     setLoading(false);
@@ -34,7 +36,7 @@ export default function FavoritesPage() {
                 }
 
                 // Load only displayed batch (pagination)
-                const batchIds = favorites.slice(0, displayCount);
+                const batchIds = favorites.slice(0, displayCount).map(b => b.id);
                 const promises = batchIds.map(id =>
                     fetch(`${API_URL}/manga/${id}/`)
                         .then(res => res.ok ? res.json() : null)
@@ -76,7 +78,7 @@ export default function FavoritesPage() {
         setLoadingMore(false);
     };
 
-    if (loading) {
+    if (loading || !isStorageLoaded || isLoadingAuth) {
         return (
             <>
                 <Header />
@@ -115,6 +117,7 @@ export default function FavoritesPage() {
                                 onLoadMore={() => { }}
                                 hasMore={false}
                                 showHeader={false}
+                                limit={favoriteManga.length}
                             />
 
                             {/* Load More Button */}

@@ -147,19 +147,31 @@ interface FilterData {
   status?: string;
   categories?: string[]; // في هذا السياق، الـ Categories هي الـ Genres
   query?: string;
+  type?: string;
   sortBy?: string;
 }
 
 interface FilterSectionProps {
   onFilter: (filters: FilterData) => void;
   onSort: (sortType: string) => void;
+  initialCategories?: string[];
 }
 
-export function FilterSection({ onFilter, onSort }: FilterSectionProps) {
+export function FilterSection({ onFilter, onSort, initialCategories = [] }: FilterSectionProps) {
   const [status, setStatus] = useState<string>('All');
+  const [type, setType] = useState<string>('All');
   const [order, setOrder] = useState<string>('Name');
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(initialCategories);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+
+  const [lastInitialCategories, setLastInitialCategories] = useState<string[]>(initialCategories);
+
+  useEffect(() => {
+    if (JSON.stringify(lastInitialCategories) !== JSON.stringify(initialCategories)) {
+      setSelectedGenres(initialCategories);
+      setLastInitialCategories(initialCategories);
+    }
+  }, [initialCategories, lastInitialCategories]);
 
   // حالة لتخزين الأنواع القادمة من السيرفر
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
@@ -178,17 +190,19 @@ export function FilterSection({ onFilter, onSort }: FilterSectionProps) {
   }, []);
 
   const handleFilter = () => {
-    onFilter({ status, categories: selectedGenres, sortBy: order });
+    onFilter({ status, type, categories: selectedGenres, sortBy: order });
     setShowCategoryDropdown(false);
   };
 
   const handleCategoryToggle = (cat: string) => {
-    setSelectedGenres(prev =>
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-    );
+    const newGenres = selectedGenres.includes(cat) ? selectedGenres.filter(c => c !== cat) : [...selectedGenres, cat];
+    setSelectedGenres(newGenres);
+    // Auto-apply genre filter
+    onFilter({ status, type, categories: newGenres, sortBy: order });
   };
 
   const statuses = ['All', 'Completed', 'Ongoing'];
+  const storyTypes = ['All', 'Manga', 'Manhwa', 'Manhua', 'Comic'];
   const orders = ['Name', 'Latest Chapter', 'Most Popular', 'Rating'];
 
   return (
@@ -202,10 +216,25 @@ export function FilterSection({ onFilter, onSort }: FilterSectionProps) {
 
           <div className="flex flex-wrap gap-3 items-center justify-end w-full md:w-auto relative z-20">
 
+            {/* Type Dropdown */}
+            <select
+              value={type}
+              onChange={(e) => {
+                setType(e.target.value);
+                onFilter({ status, type: e.target.value, categories: selectedGenres, sortBy: order });
+              }}
+              className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+            >
+              {storyTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+
             {/* Status Dropdown */}
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                onFilter({ status: e.target.value, type, categories: selectedGenres, sortBy: order });
+              }}
               className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
               {statuses.map(s => <option key={s} value={s}>{s}</option>)}
@@ -255,10 +284,7 @@ export function FilterSection({ onFilter, onSort }: FilterSectionProps) {
             >
               {orders.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
-
-            <button onClick={handleFilter} className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl shadow-lg">
-              <FaFilter />
-            </button>
+            {/* The filter button was removed as requested so filters are applied immediately */}
           </div>
         </div>
       </div>

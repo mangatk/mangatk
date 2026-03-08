@@ -19,6 +19,7 @@ export function useStorage() {
   const { isAuthenticated, getAuthHeaders } = useAuth();
   const [bookmarks, setBookmarks] = useState<Manga[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
   // Load data on startup
   useEffect(() => {
@@ -44,9 +45,10 @@ export function useStorage() {
 
       // Load bookmarks - from API if authenticated, localStorage otherwise
       if (isAuthenticated) {
-        loadBookmarksFromAPI();
+        loadBookmarksFromAPI().finally(() => setIsStorageLoaded(true));
       } else {
         loadBookmarksFromLocal();
+        setIsStorageLoaded(true);
       }
     }
   }, [isAuthenticated]);
@@ -149,6 +151,7 @@ export function useStorage() {
   const addToHistory = useCallback(async (manga: Manga, chapterId: string, chapterNumber?: number) => {
     // Save to localStorage first
     setHistory(prev => {
+      // If the very first item is exactly this manga and chapter, don't update anything
       if (prev.length > 0 && prev[0].mangaId === manga.id && prev[0].chapterId === chapterId) {
         return prev;
       }
@@ -196,6 +199,7 @@ export function useStorage() {
     history,
     toggleBookmark,
     isBookmarked,
-    addToHistory
+    addToHistory,
+    isStorageLoaded
   };
 }

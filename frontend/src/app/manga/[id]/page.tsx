@@ -40,6 +40,7 @@ export default function MangaDetail() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [chapterPage, setChapterPage] = useState(0);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -108,6 +109,15 @@ export default function MangaDetail() {
   }, [user, manga, getAuthHeaders]);
 
   const handleBookmark = () => {
+    if (!user) {
+      import('react-hot-toast').then(({ toast }) => {
+        toast.error('يجب تسجيل الدخول لإضافة المانجا للمفضلة', {
+          style: { background: '#333', color: '#fff' }
+        });
+      });
+      return;
+    }
+
     if (manga) {
       toggleBookmark(manga);
       setIsFav(!isFav);
@@ -138,6 +148,13 @@ export default function MangaDetail() {
     }
     return chapters;
   }, [manga, sortOrder, searchQuery]);
+
+  const CHAPTERS_PER_PAGE = 50;
+  const totalPages = Math.ceil(filteredChapters.length / CHAPTERS_PER_PAGE);
+  const currentChapters = filteredChapters.slice(
+    chapterPage * CHAPTERS_PER_PAGE,
+    (chapterPage + 1) * CHAPTERS_PER_PAGE
+  );
 
   if (loading) {
     return (
@@ -247,9 +264,13 @@ export default function MangaDetail() {
 
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">
               {manga.genres.map(genre => (
-                <span key={genre} className="px-3 py-1 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded-lg text-sm transition-colors cursor-default border border-transparent hover:border-blue-200 dark:hover:border-blue-800">
+                <Link
+                  key={genre}
+                  href={`/browse?genre=${encodeURIComponent(genre)}`}
+                  className="px-3 py-1 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded-lg text-sm transition-colors cursor-pointer border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                >
                   {genre}
-                </span>
+                </Link>
               ))}
             </div>
 
@@ -292,9 +313,36 @@ export default function MangaDetail() {
                 </div>
               </div>
 
+              {totalPages > 1 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const chunk = filteredChapters.slice(i * CHAPTERS_PER_PAGE, (i + 1) * CHAPTERS_PER_PAGE);
+                    if (chunk.length === 0) return null;
+
+                    const firstChapter = chunk[0].number;
+                    const lastChapter = chunk[chunk.length - 1].number;
+                    const minCh = Math.min(firstChapter, lastChapter);
+                    const maxCh = Math.max(firstChapter, lastChapter);
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setChapterPage(i)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${chapterPage === i
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                          }`}
+                      >
+                        {minCh} - {maxCh}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="grid gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {filteredChapters.length > 0 ? (
-                  filteredChapters.map((chapter) => (
+                {currentChapters.length > 0 ? (
+                  currentChapters.map((chapter) => (
                     <Link
                       key={chapter.id}
                       href={`/read/${chapter.id}?mangaId=${manga.id}`}

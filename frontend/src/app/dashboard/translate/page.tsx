@@ -64,6 +64,10 @@ export default function TranslatePage() {
 
     const [error, setError] = useState('');
 
+    // Language selection states
+    const [sourceLanguage, setSourceLanguage] = useState<string>('');
+    const targetLanguage = 'arabic'; // ثابت على العربية
+
     // Fetch manga list
     useEffect(() => {
         fetchManga();
@@ -111,6 +115,12 @@ export default function TranslatePage() {
             return;
         }
 
+        // Validate language selection
+        if (!sourceLanguage) {
+            setError('يرجى اختيار لغة المصدر قبل الترجمة');
+            return;
+        }
+
         setUploading(true);
         setError('');
         setCurrentJob(null);
@@ -126,6 +136,8 @@ export default function TranslatePage() {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('source_language', sourceLanguage);
+        formData.append('target_language', targetLanguage);
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -559,6 +571,49 @@ export default function TranslatePage() {
                         </h2>
 
                         <div className="space-y-4">
+                            {/* Language Selection */}
+                            <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
+                                <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                                    <span className="text-blue-400">⚠️</span>
+                                    اختيار اللغة (ضروري للترجمة)
+                                </h3>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Source Language */}
+                                    <div>
+                                        <label className="block text-gray-300 text-xs font-medium mb-1.5">
+                                            من (لغة المصدر) *
+                                        </label>
+                                        <select
+                                            value={sourceLanguage}
+                                            onChange={(e) => setSourceLanguage(e.target.value)}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                                            required
+                                            disabled={uploading || !!currentJob}
+                                        >
+                                            <option value="">اختر اللغة</option>
+                                            <option value="chinese">🇨🇳 صيني</option>
+                                            <option value="japanese">🇯🇵 ياباني</option>
+                                            <option value="korean">🇰🇷 كوري</option>
+                                            <option value="english">🇬🇧 إنجليزي</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Target Language (Fixed) */}
+                                    <div>
+                                        <label className="block text-gray-300 text-xs font-medium mb-1.5">
+                                            إلى (لغة الهدف)
+                                        </label>
+                                        <div className="w-full bg-gray-800 border border-gray-600 rounded-lg py-2 px-3 text-gray-400 text-sm flex items-center gap-2">
+                                            <span>🇸🇦</span>
+                                            <span>عربي (ثابت)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-gray-500 text-xs mt-2">
+                                    اختر لغة المصدر الصحيحة للحصول على أفضل نتائج ترجمة
+                                </p>
+                            </div>
                             <div>
                                 <label className="block text-gray-400 text-sm mb-2">ملف الفصل (ZIP أو CBZ)</label>
                                 <input

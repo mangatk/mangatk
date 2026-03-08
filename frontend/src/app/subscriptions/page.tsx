@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FaCheck, FaCrown, FaStar, FaInfinity } from 'react-icons/fa';
 import { useAuth } from '@/context/AuthContext';
+import { Header } from '@/components/Header';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -37,7 +38,7 @@ export default function SubscriptionsPage() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, login } = useAuth();
 
     useEffect(() => {
         fetchPlans();
@@ -107,8 +108,9 @@ export default function SubscriptionsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black py-12 px-4">
-                <div className="container mx-auto max-w-7xl">
+            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+                <Header />
+                <div className="py-12 px-4 container mx-auto max-w-7xl">
                     <div className="flex items-center justify-center h-64">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
@@ -118,8 +120,9 @@ export default function SubscriptionsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-black py-12 px-4">
-            <div className="container mx-auto max-w-7xl">
+        <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-black">
+            <Header />
+            <div className="py-12 px-4 container mx-auto max-w-7xl">
                 {/* Header */}
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -154,7 +157,7 @@ export default function SubscriptionsPage() {
 
                         async function handleSubscribe() {
                             if (!isAuthenticated) {
-                                window.location.href = '/login';
+                                login();
                                 return;
                             }
 
@@ -319,10 +322,10 @@ export default function SubscriptionsPage() {
                                         <button
                                             onClick={handleSubscribe}
                                             className={`w-full py-3 rounded-lg font-bold transition-all duration-300 ${isFree || isDiscountedToFree
-                                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg'
-                                                    : isPopular
-                                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg'
-                                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg'
+                                                : isPopular
+                                                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg'
+                                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
                                                 }`}
                                         >
                                             {buttonText}

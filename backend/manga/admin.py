@@ -54,10 +54,10 @@ class ChapterInline(admin.TabularInline):
 class MangaAdmin(admin.ModelAdmin):
     """Admin interface for Manga model"""
     list_display = [
-        'title', 'author', 'status', 'avg_rating', 
+        'title', 'author', 'status', 'story_type', 'avg_rating', 
         'views', 'chapter_count', 'cover_preview', 'last_updated'
     ]
-    list_filter = ['status', 'category', 'genres', 'created_at']
+    list_filter = ['status', 'story_type', 'category', 'genres', 'created_at']
     search_fields = ['title', 'sub_titles', 'author', 'description']
     filter_horizontal = ['genres']
     prepopulated_fields = {'slug': ('title',)}
@@ -74,7 +74,7 @@ class MangaAdmin(admin.ModelAdmin):
             'fields': ('cover_image_url', 'cover_preview_large')
         }),
         ('Classification', {
-            'fields': ('status', 'category', 'genres')
+            'fields': ('status', 'story_type', 'category', 'genres')
         }),
         ('Statistics', {
             'fields': ('avg_rating', 'views', 'chapter_count', 'last_updated')
@@ -360,8 +360,11 @@ class AchievementAdmin(admin.ModelAdmin):
         ('Requirements', {
             'fields': ('category', 'requirement_type', 'requirement_value', 'reward_points')
         }),
+        ('Targets & Timeframes', {
+            'fields': ('target_manga', 'target_category', 'active_from', 'active_until')
+        }),
         ('Status', {
-            'fields': ('is_active',)
+            'fields': ('is_active', 'is_secret')
         }),
     )
 

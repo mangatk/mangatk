@@ -113,8 +113,13 @@ export default function AchievementsPage() {
                     >
                         <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center">
-                                    <FaTrophy className="text-yellow-400 text-xl" />
+                                <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center overflow-hidden relative">
+                                    {item.icon_url ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={item.icon_url} alt={item.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <FaTrophy className="text-yellow-400 text-xl" />
+                                    )}
                                 </div>
                                 <div>
                                     <h3 className="text-white font-medium">{item.name}</h3>
@@ -182,6 +187,7 @@ function AchievementModal({ item, onClose, onSuccess }: { item: Achievement | nu
         is_active: item?.is_active ?? true,
         target_manga: item?.target_manga || '',
     });
+    const [iconFile, setIconFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [mangaList, setMangaList] = useState<{ id: string; title: string }[]>([]);
 
@@ -203,18 +209,28 @@ function AchievementModal({ item, onClose, onSuccess }: { item: Achievement | nu
         try {
             const token = localStorage.getItem('manga_token');
             const url = item ? `${API_URL}/achievements/${item.id}/` : `${API_URL}/achievements/`;
-            const payload = {
-                ...formData,
-                target_manga: formData.target_manga || null,
-            };
+
+            const formDataToSend = new FormData();
+            Object.entries(formData).forEach(([key, value]) => {
+                if (value !== null && value !== '') {
+                    formDataToSend.append(key, String(value));
+                } else if (key === 'target_manga' && value === '') {
+                    // Send empty string for target manga nullification
+                    formDataToSend.append(key, '');
+                }
+            });
+
+            if (iconFile) {
+                formDataToSend.append('icon_file', iconFile);
+            }
 
             const res = await fetch(url, {
                 method: item ? 'PUT' : 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
+                    // Do not set Content-Type to application/json, let browser boundary handle FormData
                 },
-                body: JSON.stringify(payload),
+                body: formDataToSend,
             });
 
             if (!res.ok) {
@@ -303,14 +319,23 @@ function AchievementModal({ item, onClose, onSuccess }: { item: Achievement | nu
                     </div>
 
                     <div>
-                        <label className="text-gray-400 text-sm">رابط الأيقونة</label>
-                        <input
-                            type="url"
-                            value={formData.icon_url}
-                            onChange={(e) => setFormData({ ...formData, icon_url: e.target.value })}
-                            placeholder="https://..."
-                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500"
-                        />
+                        <label className="text-gray-400 text-sm mb-1 block">الأيقونة (رفع أو رابط)</label>
+                        <div className="space-y-2">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setIconFile(e.target.files?.[0] || null)}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-600 file:text-white hover:file:bg-yellow-700"
+                            />
+                            <div className="text-gray-400 text-xs text-center">أو أدخل رابطاً مباشراً:</div>
+                            <input
+                                type="url"
+                                value={formData.icon_url}
+                                onChange={(e) => setFormData({ ...formData, icon_url: e.target.value })}
+                                placeholder="https://..."
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

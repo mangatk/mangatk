@@ -5,7 +5,8 @@ Provides API endpoints for manga, chapters, genres, and categories
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Count, Avg, Prefetch, Max
+from django.db.models.functions import Coalesce
 from .models import Genre, Category, Manga, Chapter, ChapterImage, SubscriptionPlan
 from .serializers import (
     GenreSerializer, CategorySerializer, SubscriptionPlanSerializer,
@@ -72,11 +73,15 @@ class MangaViewSet(viewsets.ModelViewSet):
     - ?status=ongoing|completed - Filter by status
     - ?ordering=title|-title|avg_rating|-avg_rating|views|-views
     """
-    queryset = Manga.objects.all().prefetch_related('genres', 'category', 'chapters')
+    queryset = Manga.objects.all().prefetch_related('genres', 'category').annotate(
+        annotated_chapter_count=Count('chapters', distinct=True),
+        annotated_avg_rating=Avg('chapters__ratings__rating'),
+        latest_chapter_date=Coalesce(Max('chapters__created_at'), 'updated_at')
+    )
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'sub_titles', 'author', 'description', 'genres__name']
-    # Removed computed fields (avg_rating, last_updated) from DB ordering
-    ordering_fields = ['title', 'views', 'updated_at', 'created_at']
+    # Removed computed fields (avg_rating, last_updated) from DB ordering, except annotated_avg_rating
+    ordering_fields = ['title', 'views', 'updated_at', 'created_at', 'annotated_avg_rating', 'latest_chapter_date']
     ordering = ['-updated_at']
     
     def get_serializer_class(self):
@@ -88,6 +93,15 @@ class MangaViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        if self.action == 'retrieve':
+            chapters_qs = Chapter.objects.annotate(
+                annotated_image_count=Count('images', distinct=True),
+                annotated_avg_rating=Avg('ratings__rating')
+            ).order_by('number')
+            queryset = queryset.prefetch_related(
+                Prefetch('chapters', queryset=chapters_qs)
+            )
         
         # Filter by category
         category = self.request.query_params.get('category', None)
@@ -103,6 +117,11 @@ class MangaViewSet(viewsets.ModelViewSet):
         status_param = self.request.query_params.get('status', None)
         if status_param:
             queryset = queryset.filter(status=status_param)
+            
+        # Filter by story_type
+        type_param = self.request.query_params.get('type', None)
+        if type_param:
+            queryset = queryset.filter(story_type=type_param)
         
         # Filter by min_rating removed as it requires aggregation
         
@@ -191,6 +210,12 @@ class ChapterViewSet(viewsets.ModelViewSet):
         manga_id = self.request.query_params.get('manga', None)
         if manga_id:
             queryset = queryset.filter(manga_id=manga_id)
+            
+        if self.action in ['list', 'retrieve']:
+            queryset = queryset.annotate(
+                annotated_image_count=Count('images', distinct=True),
+                annotated_avg_rating=Avg('ratings__rating')
+            )
         
         return queryset
     
@@ -378,6 +403,10 @@ class ReadingHistoryViewSet(viewsets.ViewSet):
             defaults={'manga': chapter.manga}
         )
         
+        # If the history already existed, save it to trigger auto_now=True on last_read
+        if not created:
+            history.save()
+            
         # Award points and update time only if >= 30 seconds AND not claimed before
         points_awarded = False
         if reading_seconds >= 30 and not history.points_claimed:
@@ -473,7 +502,12 @@ class BookmarkViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return UserBookmark.objects.filter(user=self.request.user)
+        from django.db.models import Prefetch, Count
+        from .models import Manga
+        manga_qs = Manga.objects.annotate(annotated_chapter_count=Count('chapters', distinct=True))
+        return UserBookmark.objects.filter(user=self.request.user).prefetch_related(
+            Prefetch('manga', queryset=manga_qs)
+        )
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -673,6 +707,44 @@ class AchievementViewSet(viewsets.ModelViewSet):
     serializer_class = AchievementSerializer
     permission_classes = [AllowAny]
     
+    def perform_create(self, serializer):
+        icon_file = self.request.FILES.get('icon_file')
+        icon_url = serializer.validated_data.get('icon_url')
+        
+        if icon_file:
+            from .services import ImgBBService
+            # Upload icon using ImgBBService
+            name = serializer.validated_data.get('slug', 'achievement_icon')
+            try:
+                result = ImgBBService.upload_image(icon_file, name=f"icon_{name}")
+                if result and 'url' in result:
+                    icon_url = result['url']
+            except Exception as e:
+                print(f"Error uploading achievement icon: {e}")
+                
+        serializer.save(icon_url=icon_url)
+        
+    def perform_update(self, serializer):
+        icon_file = self.request.FILES.get('icon_file')
+        icon_url = serializer.validated_data.get('icon_url')
+        
+        if icon_file:
+            from .services import ImgBBService
+            # Upload icon using ImgBBService
+            name = serializer.validated_data.get('slug', 'achievement_icon')
+            try:
+                result = ImgBBService.upload_image(icon_file, name=f"icon_{name}")
+                if result and 'url' in result:
+                    icon_url = result['url']
+            except Exception as e:
+                print(f"Error uploading achievement icon: {e}")
+                
+        if icon_url:
+            serializer.save(icon_url=icon_url)
+        else:
+            serializer.save()
+
+    
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my(self, request):
         """Get user's unlocked achievements"""
@@ -709,10 +781,36 @@ class AchievementViewSet(viewsets.ModelViewSet):
             if UserAchievement.objects.filter(user=user, achievement=achievement, is_completed=True).exists():
                 continue
             
-            # Check if requirement met
+            # 1. Time constraints check
+            from django.utils import timezone
+            now = timezone.now()
+            if achievement.active_from and now < achievement.active_from:
+                continue
+            if achievement.active_until and now > achievement.active_until:
+                continue
+            
+            # 2. Check if requirement met
             category = achievement.category
             threshold = achievement.requirement_value
             current_value = stats.get(category, 0)
+            
+            # Target manga restrictions
+            if achievement.target_manga:
+                if category == 'reading':
+                    current_value = ReadingHistory.objects.filter(user=user, manga=achievement.target_manga).count()
+                elif category == 'collection':
+                    current_value = UserBookmark.objects.filter(user=user, manga=achievement.target_manga).count()
+                elif category == 'social':
+                    current_value = Comment.objects.filter(user=user, chapter__manga=achievement.target_manga, is_deleted=False).count() + Comment.objects.filter(user=user, manga=achievement.target_manga, is_deleted=False).count()
+            
+            # Target category restrictions
+            elif achievement.target_category:
+                if category == 'reading':
+                    current_value = ReadingHistory.objects.filter(user=user, manga__category=achievement.target_category).count()
+                elif category == 'collection':
+                    current_value = UserBookmark.objects.filter(user=user, manga__category=achievement.target_category).count()
+                elif category == 'social':
+                    current_value = Comment.objects.filter(user=user, chapter__manga__category=achievement.target_category, is_deleted=False).count() + Comment.objects.filter(user=user, manga__category=achievement.target_category, is_deleted=False).count()
             
             # Special handling for secret achievements
             if category == 'secret' and achievement.requirement_type == 'night_reading':
@@ -744,6 +842,37 @@ class AchievementViewSet(viewsets.ModelViewSet):
         return Response({
             'newly_unlocked': newly_unlocked,
             'stats': stats
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def equip(self, request, pk=None):
+        """Equip an earned achievement to display its icon on the user's profile"""
+        user = request.user
+        
+        # If user passes action=unequip or pk=none-like string
+        if pk == 'unequip':
+            user.equipped_achievement = None
+            user.save(update_fields=['equipped_achievement'])
+            return Response({'message': 'تم إلغاء تحديد الإنجاز بنجاح', 'equipped_achievement': None})
+            
+        try:
+            achievement = self.get_object()
+        except Exception:
+            return Response({'error': 'الإنجاز غير موجود'}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Verify user actually unlocked this achievement
+        if not UserAchievement.objects.filter(user=user, achievement=achievement, is_completed=True).exists():
+            return Response({'error': 'يجب عليك إكمال هذا الإنجاز أولاً قبل تحديده'}, status=status.HTTP_403_FORBIDDEN)
+            
+        user.equipped_achievement = achievement
+        user.save(update_fields=['equipped_achievement'])
+        return Response({
+            'message': 'تم تحديد الإنجاز بنجاح', 
+            'equipped_achievement': {
+                'id': str(achievement.id),
+                'icon_url': achievement.icon_url,
+                'name_ar': achievement.name_ar
+            }
         })
 
 from rest_framework.decorators import api_view, permission_classes

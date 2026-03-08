@@ -104,7 +104,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
-import dj_database_url
+# import dj_database_url
 
 # Database configuration from environment variable
 DATABASES = {
@@ -175,7 +175,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'manga.auth0_utils.Auth0JSONWebTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'UNICODE_JSON': True,
@@ -208,9 +208,16 @@ CACHES = {
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 IMGBB_API_URL = 'https://api.imgbb.com/1/upload'
 
+# Add Auth0 variables at the bottom
+AUTH0_DOMAIN = os.getenv('YOUR_AUTH0_DOMAIN') # Get from Auth0 Dashboard
+AUTH0_AUDIENCE = os.getenv('YOUR_AUTH0_API_IDENTIFIER') # Get from Auth0 Dashboard
+
+
 # backend/config/settings.py
 
 AUTH_USER_MODEL = 'manga.User'
 
 CORS_ALLOW_ALL_ORIGINS = True
 ALLOWED_HOSTS = ['*']
+
+

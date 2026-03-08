@@ -5,21 +5,20 @@ import Script from 'next/script';
 
 export default function OneSignalInit() {
     useEffect(() => {
-        const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
-        if (!appId) {
-            console.error('OneSignal App ID is missing');
-            return;
-        }
+        // const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+        // if (!appId) {
+        //     console.warn('OneSignal App ID is missing - push notifications disabled');
+        //     return;
+        // }
 
-        (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
-        (window as any).OneSignalDeferred.push(async function (OneSignal: any) {
-            await OneSignal.init({
-                appId: appId,
-            });
-
-            // Log initialization for debugging
-            console.log('OneSignal initialized with App ID:', appId);
-        });
+        // (window as any).OneSignalDeferred = (window as any).OneSignalDeferred || [];
+        // (window as any).OneSignalDeferred.push(async function (OneSignal: any) {
+        //     await OneSignal.init({
+        //         appId: appId,
+        //     });
+        //     // Log initialization for debugging
+        //     console.log('OneSignal initialized with App ID:', appId);
+        // });
     }, []);
 
     return (

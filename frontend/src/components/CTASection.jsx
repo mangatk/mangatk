@@ -8,19 +8,14 @@ export function CTASection() {
         <p className="text-xl mb-8 opacity-90">
           Discover thousands of manga titles, track your reading progress, and connect with fellow fans
         </p>
-        <Link 
-          href="/register" 
-          className="bg-white text-blue-600 px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors duration-300 inline-block"
-          aria-label="Register for MangaTK account"
-        >
-          Join Now - It's Free!
-        </Link>
-        <p className="mt-4 text-sm opacity-80">
-          Already have an account?{' '}
-          <Link href="/login" className="underline hover:no-underline">
-            Sign in here
-          </Link>
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button onClick={() => login()} className="px-8 py-3 bg-white text-blue-600 rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-lg shadow-black/10">
+            ابدأ القراءة الآن
+          </button>
+          <button onClick={() => login()} className="text-blue-100 hover:text-white transition-colors">
+            لديك حساب بالفعل؟ <span className="underline hover:no-underline font-bold">تسجيل الدخول</span>
+          </button>
+        </div>
       </div>
     </section>
   );

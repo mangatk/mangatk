@@ -67,6 +67,7 @@ def login_view(request):
             'avatar_url': user.avatar_url or '',
             'points': user.points,
             'equipped_title': user.equipped_title or '',
+            'equipped_achievement_icon': user.equipped_achievement.icon_url if user.equipped_achievement else None,
         }
     })
 
@@ -120,6 +121,7 @@ def register_view(request):
             'avatar_url': '',
             'points': user.points,
             'equipped_title': '',
+            'equipped_achievement_icon': None,
         }
     }, status=status.HTTP_201_CREATED)
 
@@ -174,5 +176,6 @@ def profile_view(request):
         'chapters_read': user.chapters_read,
         'total_reading_time': user.total_reading_time,
         'equipped_title': user.equipped_title or '',
+        'equipped_achievement_icon': user.equipped_achievement.icon_url if user.equipped_achievement else None,
     })
 

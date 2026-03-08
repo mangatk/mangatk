@@ -21,6 +21,8 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
     return () => clearInterval(interval);
   }, [current]);
 
+  if (!featured.length) return null;
+
   return (
     <section
       className="relative bg-gray-900 overflow-hidden mx-auto w-full max-w-[1080px] h-[400px] rounded-2xl shadow-2xl mt-6 group"

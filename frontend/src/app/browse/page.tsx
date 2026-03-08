@@ -230,7 +230,8 @@
 // }
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { FilterSection } from '@/components/FilterSection';
@@ -239,14 +240,17 @@ import { getMangaList } from '@/services/api';
 import { Manga, FilterState } from '@/types/manga';
 import { FaLayerGroup, FaSearch, FaRandom, FaFilter } from 'react-icons/fa'; // Added FaRandom, FaFilter
 
-export default function BrowsePage() {
+function BrowseContent() {
+   const searchParams = useSearchParams();
+   const initialGenre = searchParams.get('genre');
+
    const [manga, setManga] = useState<Manga[]>([]);
    const [loading, setLoading] = useState(true);
    const [loadingMore, setLoadingMore] = useState(false);
    const [filters, setFilters] = useState<FilterState>({
       query: '',
       status: 'All',
-      categories: [],
+      categories: initialGenre ? [initialGenre] : [],
       sortBy: 'Latest Chapter'
    });
 
@@ -316,7 +320,7 @@ export default function BrowsePage() {
             {/* Filter Bar */}
             <div className="sticky top-16 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
                <div className="container mx-auto px-4">
-                  <FilterSection onFilter={handleFilter} onSort={handleSort} />
+                  <FilterSection onFilter={handleFilter} onSort={handleSort} initialCategories={filters.categories} />
                </div>
             </div>
 
@@ -390,4 +394,16 @@ export default function BrowsePage() {
          <Footer />
       </div>
    );
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <BrowseContent />
+    </Suspense>
+  );
 }
