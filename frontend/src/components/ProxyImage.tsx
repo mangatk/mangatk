@@ -11,10 +11,12 @@ interface ProxyImageProps {
     onClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 // قائمة بوكلاء متعددين للاستخدام
 const PROXY_URLS = [
+    `${API_URL}/proxy-image/?url=`,
     'https://images.weserv.nl/?url=',
-    'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
 ];
 

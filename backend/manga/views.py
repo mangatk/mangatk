@@ -916,4 +916,32 @@ def onesignal_test(request):
     except Exception as e:
         return Response({"ok": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+import requests
+from django.http import HttpResponse
+
+@api_view(["GET"])
+@permission_classes([])
+def proxy_image(request):
+    """
+    Proxy an image URL through the server to bypass client-side CORS or blocking.
+    GET /api/proxy-image/?url=https://i.ibb.co/....
+    """
+    image_url = request.query_params.get("url")
+    if not image_url:
+        return Response({"error": "Missing url parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        # Fetch the image from the given URL
+        response = requests.get(image_url, stream=True, timeout=10)
+        response.raise_for_status()
+        
+        # Read the content
+        content_type = response.headers.get('content-type', 'image/jpeg')
+        return HttpResponse(response.content, content_type=content_type)
+        
+    except requests.exceptions.RequestException as e:
+        return Response({"error": f"Failed to fetch image: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
+    except Exception as e:
+        return Response({"ok": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 

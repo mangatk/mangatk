@@ -83,6 +83,7 @@ urlpatterns = [
     path('translation/new/delete/<str:job_id>/', translation_endpoints.delete_translation_job, name='translation-new-delete'),
     path("push/register-token/", register_fcm_token),
     path("push/onesignal/test/", onesignal_test),
+    path("proxy-image/", views.proxy_image, name="proxy-image"),
 
     # Router URLs (must be LAST to avoid conflicts with specific endpoints above)
     path('', include(router.urls)),
