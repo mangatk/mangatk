@@ -104,7 +104,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
-# import dj_database_url
+import dj_database_url
 
 # Database configuration from environment variable
 DATABASES = {
