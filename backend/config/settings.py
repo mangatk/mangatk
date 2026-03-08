@@ -104,7 +104,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
-# import dj_database_url
+import dj_database_url
 
 # Database configuration from environment variable
 DATABASES = {
@@ -219,5 +219,6 @@ AUTH_USER_MODEL = 'manga.User'
 
 CORS_ALLOW_ALL_ORIGINS = True
 ALLOWED_HOSTS = ['*']
+
 
 
