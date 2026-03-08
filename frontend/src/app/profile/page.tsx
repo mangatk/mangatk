@@ -41,7 +41,7 @@ export default function ProfilePage() {
    const [currentPoints, setCurrentPoints] = useState(0);
 
    // الإنجازات من قاعدة البيانات
-   const [apiAchievements, setApiAchievements] = useState<any[]>([]);
+   const [apiAchievements, setApiAchievements] = useState<any[] | null>(null);
 
    // الإشعارات (الردود)
    const [replyNotifications, setReplyNotifications] = useState<ReplyNotification[]>([]);
@@ -367,12 +367,12 @@ export default function ProfilePage() {
                               <FaTrophy className="text-yellow-500" /> قاعة الإنجازات
                            </h2>
                            <span className="text-xs font-bold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-3 py-1 rounded-full">
-                              {unlockedIds.length} / {apiAchievements.length || ALL_ACHIEVEMENTS.length} مكتمل
+                              {unlockedIds.length} / {apiAchievements !== null ? apiAchievements.length : ALL_ACHIEVEMENTS.length} مكتمل
                            </span>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                           {(apiAchievements.length > 0 ? apiAchievements : ALL_ACHIEVEMENTS).map((ach: any) => {
+                           {(apiAchievements !== null ? apiAchievements : ALL_ACHIEVEMENTS).map((ach: any) => {
                               const achId = ach.slug || ach.id;
                               const achTitle = ach.name_ar || ach.name || ach.title;
                               const isUnlocked = unlockedIds.includes(achId);
