@@ -128,7 +128,7 @@ class MangaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manga
         fields = [
-            'id', 'title', 'sub_titles', 'slug', 'description', 'author',
+            'id', 'title', 'sub_titles', 'slug', 'description', 'author', 'artist',
             'cover_image_url', 'banner_image_url', 'has_banner', 'is_featured',
             'status', 'story_type', 'avg_rating', 'views', 'genres', 'category', 'chapter_count', 'last_updated'
         ]
@@ -205,7 +205,7 @@ class MangaCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manga
         fields = [
-            'id', 'title', 'sub_titles', 'description', 'author', 'status', 'story_type',
+            'id', 'title', 'sub_titles', 'description', 'author', 'artist', 'status', 'story_type',
             'avg_rating', 'views', 'genre_ids', 'genres', 'category_id', 'category',
             'cover_image', 'cover_image_url', 'banner_image', 'banner_image_url', 'is_featured'
         ]
