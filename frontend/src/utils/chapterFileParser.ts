@@ -97,39 +97,65 @@ function isChapterIndicator(text: string): boolean {
  * @param headers - Auth headers to use for the request
  * @returns Promise with image count
  */
-export async function countImagesInZip(file: File, headers: Record<string, string> = {}): Promise<number> {
+export async function countImagesInZip(file: File, headers?: Record<string, string>): Promise<number> {
     try {
-        const formData = new FormData();
-        formData.append('file', file);
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        const zipFile = await zip.loadAsync(file);
 
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-        const response = await fetch(`${API_URL}/chapters/analyze-zip/`, {
-            method: 'POST',
-            headers: headers,
-            body: formData,
+        let count = 0;
+        zipFile.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir) {
+                const ext = relativePath.split('.').pop()?.toLowerCase();
+                if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].includes(ext || '')) {
+                    count++;
+                }
+            }
         });
 
-        if (!response.ok) {
-            // Get error details from response
-            let errorMessage = `Failed to analyze ZIP file: ${response.status} ${response.statusText}`;
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.error || errorData.detail || errorMessage;
-            } catch (e) {
-                // If response is not JSON, use default error message
+        return count;
+    } catch (error: any) {
+        console.error('Error counting images in ZIP locally:', error);
+        return 0;
+    }
+}
+
+/**
+ * Extract image files from a ZIP archive locally
+ * @param file - The ZIP file
+ * @returns Promise with array of image File objects sorted by name
+ */
+export async function extractImagesFromZip(file: File): Promise<File[]> {
+    try {
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        const zipFile = await zip.loadAsync(file);
+
+        const imageEntries: { path: string, entry: any }[] = [];
+
+        zipFile.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir && !relativePath.includes('__MACOSX')) {
+                const ext = relativePath.split('.').pop()?.toLowerCase();
+                if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].includes(ext || '')) {
+                    imageEntries.push({ path: relativePath, entry: zipEntry });
+                }
             }
-            console.error('ZIP analysis error:', errorMessage);
-            // Return 0 instead of throwing to allow the form to continue
-            return 0;
+        });
+
+        // Sort alphabetically by path to maintain correct page order
+        imageEntries.sort((a, b) => a.path.localeCompare(b.path));
+
+        const extractedFiles: File[] = [];
+
+        for (const { path, entry } of imageEntries) {
+            const blob = await entry.async('blob');
+            const filename = path.split('/').pop() || path;
+            extractedFiles.push(new File([blob], filename, { type: blob.type || 'image/jpeg' }));
         }
 
-        const data = await response.json();
-        return data.image_count || 0;
-
-    } catch (error: any) {
-        console.error('Error counting images in ZIP:', error);
-        // Return 0 instead of throwing to allow the form to continue
-        return 0;
+        return extractedFiles;
+    } catch (error) {
+        console.error('Error extracting images from ZIP:', error);
+        throw new Error('فشل استخراج الصور من الملف المضغوط');
     }
 }

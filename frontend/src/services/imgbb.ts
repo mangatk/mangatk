@@ -141,21 +141,35 @@ export async function uploadMultipleWithProgress(
     files: File[],
     onProgress?: (overallPercent: number, currentFile: number, totalFiles: number) => void
 ): Promise<string[]> {
-    const urls: string[] = [];
+    const urls: string[] = new Array(files.length);
     const totalFiles = files.length;
+    let completedCount = 0;
 
-    for (let i = 0; i < totalFiles; i++) {
-        const url = await uploadToImgbbWithProgress(files[i], (filePercent) => {
+    const CONCURRENCY_LIMIT = 5;
+    const tasks = files.map((file, index) => {
+        return async () => {
+            // Upload without individual progress to simplify parallel execution
+            const url = await uploadToImgbb(file);
+            urls[index] = url; // Maintain original order!
+
+            completedCount++;
             if (onProgress) {
-                // Calculate overall progress: completed files + current file progress
-                const completedProgress = (i / totalFiles) * 100;
-                const currentFileProgress = (filePercent / totalFiles);
-                const overallPercent = Math.round(completedProgress + currentFileProgress);
-                onProgress(overallPercent, i + 1, totalFiles);
+                const overallPercent = Math.round((completedCount / totalFiles) * 100);
+                onProgress(overallPercent, completedCount, totalFiles);
             }
-        });
-        urls.push(url);
+        };
+    });
+
+    // Execute with concurrency pool
+    const executing = new Set<Promise<void>>();
+    for (const task of tasks) {
+        const p = task().then(() => { executing.delete(p); });
+        executing.add(p);
+        if (executing.size >= CONCURRENCY_LIMIT) {
+            await Promise.race(executing);
+        }
     }
+    await Promise.all(executing);
 
     return urls;
 }

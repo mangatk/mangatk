@@ -7,7 +7,8 @@ import { FaArrowRight, FaPlus, FaEdit, FaTrash, FaUpload, FaImages, FaChevronDow
 import { ProxyImage } from '@/components/ProxyImage';
 import { EnhancedUploadProgress } from '@/components/EnhancedUploadProgress';
 import { MultiChapterUploadModal } from '@/components/MultiChapterUploadModal';
-import { parseChapterFileName } from '@/utils/chapterFileParser';
+import { parseChapterFileName, extractImagesFromZip } from '@/utils/chapterFileParser';
+import { uploadMultipleWithProgress } from '@/services/imgbb';
 import { useAuth } from '@/context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -345,123 +346,6 @@ function AddChapterModal({
 
     const { getAuthHeaders } = useAuth();
 
-    // Check for active upload session on mount
-    useEffect(() => {
-        const uploadSessionKey = `upload_session_${mangaId}`;
-        const savedSession = localStorage.getItem(uploadSessionKey);
-
-        if (savedSession) {
-            try {
-                const session = JSON.parse(savedSession);
-                // Check if session is less than 24 hours old
-                const sessionAge = Date.now() - session.startedAt;
-                const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-                if (sessionAge < maxAge && session.jobId) {
-                    // Resume upload progress display
-                    setJobId(session.jobId);
-                    setChapterNumber(session.chapterNumber);
-                    setChapterTitle(session.chapterTitle || '');
-                    setLoading(true);
-                    setUploadState({
-                        stages: [
-                            { name: 'رفع الملف إلى الخادم', weight: 20 },
-                            { name: 'رفع الصور إلى ImgBB', weight: 80 }
-                        ],
-                        currentStage: 1, // Already in ImgBB stage
-                        currentStageProgress: 0,
-                        status: 'uploading',
-                        message: 'استئناف عرض التقدم...',
-                        error: ''
-                    });
-
-                    // Start polling immediately
-                    resumeProgressPolling(session.jobId);
-                } else {
-                    // Session too old, remove it
-                    localStorage.removeItem(uploadSessionKey);
-                }
-            } catch (e) {
-                console.error('Error loading upload session:', e);
-                localStorage.removeItem(uploadSessionKey);
-            }
-        }
-    }, [mangaId]);
-
-    // Cleanup polling interval on unmount
-    useEffect(() => {
-        return () => {
-            if (jobId) {
-                // Clear any pending intervals
-                const highestId = window.setTimeout(() => { }, 0);
-                for (let i = 0; i < highestId; i++) {
-                    window.clearTimeout(i);
-                }
-            }
-        };
-    }, [jobId]);
-
-    // Function to resume progress polling
-    function resumeProgressPolling(uploadJobId: string) {
-        const pollInterval = setInterval(async () => {
-            try {
-                const progressRes = await fetch(
-                    `${API_URL}/chapters/upload-progress/${uploadJobId}/`,
-                    {
-                        headers: getAuthHeaders()
-                    }
-                );
-
-                if (!progressRes.ok) {
-                    throw new Error('فشل الحصول على حالة الرفع');
-                }
-
-                const progressData = await progressRes.json();
-
-                // Update ImgBB upload progress
-                setUploadState(prev => ({
-                    ...prev,
-                    currentStage: 1,
-                    currentStageProgress: progressData.percentage || 0,
-                    status: progressData.status === 'completed' ? 'success' :
-                        progressData.status === 'failed' ? 'error' : 'uploading',
-                    message: progressData.status === 'completed'
-                        ? `تم رفع ${progressData.completed} صورة بنجاح!`
-                        : `جاري رفع الصور إلى ImgBB... (${progressData.completed}/${progressData.total})`,
-                    error: progressData.error || ''
-                }));
-
-                // Check if completed or failed
-                if (progressData.status === 'completed') {
-                    clearInterval(pollInterval);
-                    setLoading(false);
-                    // Clear upload session
-                    localStorage.removeItem(`upload_session_${mangaId}`);
-                    setTimeout(() => {
-                        onSuccess();
-                    }, 1500);
-                } else if (progressData.status === 'failed') {
-                    clearInterval(pollInterval);
-                    setLoading(false);
-                    // Clear upload session
-                    localStorage.removeItem(`upload_session_${mangaId}`);
-                    throw new Error(progressData.error || 'فشلت عملية الرفع');
-                }
-
-            } catch (pollError: any) {
-                clearInterval(pollInterval);
-                setLoading(false);
-                localStorage.removeItem(`upload_session_${mangaId}`);
-                setUploadState(prev => ({
-                    ...prev,
-                    status: 'error',
-                    error: pollError.message
-                }));
-                setError(pollError.message);
-            }
-        }, 500);
-    }
-
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!file) {
@@ -471,155 +355,76 @@ function AddChapterModal({
 
         setLoading(true);
         setError('');
-        setUploadState(prev => ({
-            ...prev,
-            status: 'uploading',
+        setUploadState({
+            stages: [
+                { name: 'استخراج الصور', weight: 10 },
+                { name: 'رفع الصور إلى ImgBB', weight: 90 }
+            ],
             currentStage: 0,
             currentStageProgress: 0,
-            message: 'جاري رفع الملف...'
-        }));
+            status: 'uploading',
+            message: 'جاري استخراج الصور من الملف...',
+            error: ''
+        });
 
         try {
-            const formData = new FormData();
-            formData.append('manga', mangaId);
-            formData.append('number', chapterNumber);
-            formData.append('title', chapterTitle || `${mangaTitle} - الفصل ${chapterNumber}`);
-            formData.append('release_date', releaseDate);
-            formData.append('file', file);
+            // 1. Extract Images locally
+            const imageFiles = await extractImagesFromZip(file);
 
-            const token = localStorage.getItem('manga_token');
+            if (imageFiles.length === 0) {
+                throw new Error("لا توجد صور في الملف المضغوط");
+            }
 
-            // Use XMLHttpRequest for upload progress tracking
-            const data = await new Promise<any>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
+            setUploadState(prev => ({
+                ...prev,
+                currentStage: 1,
+                currentStageProgress: 0,
+                message: `جاري رفع ${imageFiles.length} صورة...`
+            }));
 
-                // Track file upload progress (first stage)
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = Math.round((e.loaded / e.total) * 100);
-                        setUploadState(prev => ({
-                            ...prev,
-                            currentStage: 0, // File upload stage
-                            currentStageProgress: percentComplete,
-                            status: 'uploading',
-                            message: `جاري رفع الملف... ${percentComplete}%`
-                        }));
-                    }
-                });
-
-                // Handle completion
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-
-                            // File uploaded successfully, move to ImgBB upload stage
-                            setUploadState(prev => ({
-                                ...prev,
-                                currentStage: 1, // ImgBB upload stage
-                                currentStageProgress: 0,
-                                message: 'تم رفع الملف، جاري معالجة الصور...'
-                            }));
-
-                            resolve(response);
-                        } catch (e) {
-                            reject(new Error('فشل في قراءة الاستجابة'));
-                        }
-                    } else {
-                        let errorMessage = `فشل الرفع: ${xhr.status}`;
-                        try {
-                            const errorResponse = JSON.parse(xhr.responseText);
-                            errorMessage = errorResponse.error || errorMessage;
-                        } catch (e) {
-                            // Ignore if response is not JSON
-                        }
-                        reject(new Error(errorMessage));
-                    }
-                });
-
-                // Handle errors
-                xhr.addEventListener('error', () => {
-                    reject(new Error('حدث خطأ أثناء الرفع'));
-                });
-
-                // Open and send request
-                xhr.open('POST', `${API_URL}/chapters/upload-async/`);
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                xhr.send(formData);
+            // 2. Upload to ImgBB with Parallel Chunks
+            const imageUrls = await uploadMultipleWithProgress(imageFiles, (overallPercent) => {
+                setUploadState(prev => ({
+                    ...prev,
+                    currentStageProgress: overallPercent,
+                    message: `جاري الرفع... ${overallPercent}%`
+                }));
             });
 
-            const uploadJobId = data.job_id;
-            setJobId(uploadJobId);
-
-            // Save upload session to localStorage
-            const uploadSession = {
-                jobId: uploadJobId,
-                mangaId: mangaId,
-                chapterNumber: chapterNumber,
-                chapterTitle: chapterTitle || `${mangaTitle} - الفصل ${chapterNumber}`,
-                startedAt: Date.now()
+            // 3. Save to Django Backend instantly
+            const token = localStorage.getItem('manga_token');
+            const data = {
+                manga: mangaId,
+                number: chapterNumber,
+                title: chapterTitle || `${mangaTitle} - الفصل ${chapterNumber}`,
+                release_date: releaseDate,
+                image_urls: imageUrls
             };
-            localStorage.setItem(`upload_session_${mangaId}`, JSON.stringify(uploadSession));
 
-            // Poll for ImgBB upload progress
-            const pollInterval = setInterval(async () => {
-                try {
-                    const progressRes = await fetch(
-                        `${API_URL}/chapters/upload-progress/${uploadJobId}/`,
-                        {
-                            headers: getAuthHeaders()
-                        }
-                    );
+            const response = await fetch(`${API_URL}/chapters/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
 
-                    if (!progressRes.ok) {
-                        throw new Error('فشل الحصول على حالة الرفع');
-                    }
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || errData.detail || "فشل حفظ الفصل في قاعدة البيانات");
+            }
 
-                    const progressData = await progressRes.json();
+            setUploadState(prev => ({
+                ...prev,
+                status: 'success',
+                currentStageProgress: 100,
+                message: 'تم إضافة الفصل بنجاح!'
+            }));
 
-                    // Update ImgBB upload progress
-                    setUploadState(prev => ({
-                        ...prev,
-                        currentStage: 1, // ImgBB upload stage
-                        currentStageProgress: progressData.percentage || 0,
-                        status: progressData.status === 'completed' ? 'success' :
-                            progressData.status === 'failed' ? 'error' : 'uploading',
-                        message: progressData.status === 'completed'
-                            ? `تم رفع ${progressData.completed} صورة بنجاح!`
-                            : `جاري رفع الصور إلى ImgBB... (${progressData.completed}/${progressData.total})`,
-                        error: progressData.error || ''
-                    }));
-
-                    // Check if completed or failed
-                    if (progressData.status === 'completed') {
-                        clearInterval(pollInterval);
-                        setLoading(false);
-                        // Clear upload session from localStorage
-                        localStorage.removeItem(`upload_session_${mangaId}`);
-                        setTimeout(() => {
-                            onSuccess();
-                        }, 1500);
-                    } else if (progressData.status === 'failed') {
-                        clearInterval(pollInterval);
-                        setLoading(false);
-                        // Clear upload session from localStorage
-                        localStorage.removeItem(`upload_session_${mangaId}`);
-                        throw new Error(progressData.error || 'فشلت عملية الرفع');
-                    }
-
-                } catch (pollError: any) {
-                    clearInterval(pollInterval);
-                    setLoading(false);
-                    // Clear upload session from localStorage
-                    localStorage.removeItem(`upload_session_${mangaId}`);
-                    setUploadState(prev => ({
-                        ...prev,
-                        status: 'error',
-                        error: pollError.message
-                    }));
-                    setError(pollError.message);
-                }
-            }, 500); // Poll every 500ms
+            setTimeout(() => {
+                onSuccess();
+            }, 1500);
 
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الرفع');

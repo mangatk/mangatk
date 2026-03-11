@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaUpload, FaTrash, FaEdit, FaCheck, FaImages, FaTimes } from 'react-icons/fa';
-import { parseChapterFileName, countImagesInZip } from '@/utils/chapterFileParser';
+import { parseChapterFileName, countImagesInZip, extractImagesFromZip } from '@/utils/chapterFileParser';
+import { uploadMultipleWithProgress } from '@/services/imgbb';
 import { EnhancedUploadProgress } from './EnhancedUploadProgress';
 import { useAuth } from '@/context/AuthContext';
 
@@ -167,129 +168,57 @@ export function MultiChapterUploadModal({
 
     // Upload a single chapter
     async function uploadSingleChapter(chapterFile: ChapterFile): Promise<void> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const formData = new FormData();
-                formData.append('manga', mangaId);
-                formData.append('number', chapterFile.number);
-                formData.append('title', chapterFile.title);
-                formData.append('release_date', releaseDate);
-                formData.append('file', chapterFile.file);
+        try {
+            // 1. Extract Images locally
+            const imageFiles = await extractImagesFromZip(chapterFile.file);
 
-                const token = localStorage.getItem('manga_token');
-
-                // Use XMLHttpRequest for upload progress
-                const xhr = new XMLHttpRequest();
-
-                // Track file upload progress
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percentComplete = Math.round((e.loaded / e.total) * 100);
-                        setChapterFiles(prev => prev.map(cf =>
-                            cf.id === chapterFile.id
-                                ? { ...cf, uploadProgress: percentComplete * 0.2 } // File upload is 20% of total
-                                : cf
-                        ));
-                    }
-                });
-
-                // Handle completion
-                xhr.addEventListener('load', async () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            const jobId = response.job_id;
-
-                            // Update with job ID
-                            setChapterFiles(prev => prev.map(cf =>
-                                cf.id === chapterFile.id ? { ...cf, jobId } : cf
-                            ));
-
-                            // Poll for progress
-                            await pollUploadProgress(chapterFile.id, jobId);
-                            resolve();
-                        } catch (e) {
-                            reject(new Error('فشل في قراءة الاستجابة'));
-                        }
-                    } else {
-                        let errorMessage = `فشل الرفع: ${xhr.status}`;
-                        try {
-                            const errorResponse = JSON.parse(xhr.responseText);
-                            errorMessage = errorResponse.error || errorMessage;
-                        } catch (e) {
-                            // Ignore
-                        }
-                        reject(new Error(errorMessage));
-                    }
-                });
-
-                // Handle errors
-                xhr.addEventListener('error', () => {
-                    reject(new Error('حدث خطأ أثناء الرفع'));
-                });
-
-                // Send request
-                xhr.open('POST', `${API_URL}/chapters/upload-async/`);
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                xhr.send(formData);
-
-            } catch (error) {
-                reject(error);
+            if (imageFiles.length === 0) {
+                throw new Error("لا توجد صور في الملف المضغوط");
             }
-        });
-    }
 
-    // Poll upload progress
-    async function pollUploadProgress(chapterFileId: string, jobId: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const pollInterval = setInterval(async () => {
-                try {
-                    const progressRes = await fetch(
-                        `${API_URL}/chapters/upload-progress/${jobId}/`,
-                        { headers: getAuthHeaders() }
-                    );
+            // 2. Upload to ImgBB with Parallel Chunks
+            const imageUrls = await uploadMultipleWithProgress(imageFiles, (overallPercent) => {
+                setChapterFiles(prev => prev.map(cf =>
+                    cf.id === chapterFile.id
+                        ? { ...cf, uploadProgress: overallPercent * 0.9 } // ImgBB is 90% of progress
+                        : cf
+                ));
+            });
 
-                    if (!progressRes.ok) {
-                        throw new Error('فشل الحصول على حالة الرفع');
-                    }
+            // 3. Save to Django Backend instantly
+            const token = localStorage.getItem('manga_token');
+            const data = {
+                manga: mangaId,
+                number: chapterFile.number,
+                title: chapterFile.title,
+                release_date: releaseDate,
+                image_urls: imageUrls
+            };
 
-                    const progressData = await progressRes.json();
+            const response = await fetch(`${API_URL}/chapters/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
 
-                    // Update progress (20% file upload + 80% ImgBB upload)
-                    const imgbbProgress = progressData.percentage || 0;
-                    const totalProgress = 20 + (imgbbProgress * 0.8);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || errData.detail || "فشل حفظ الفصل في قاعدة البيانات");
+            }
 
-                    setChapterFiles(prev => prev.map(cf =>
-                        cf.id === chapterFileId
-                            ? { ...cf, uploadProgress: totalProgress }
-                            : cf
-                    ));
+            // Mark as 100% success
+            setChapterFiles(prev => prev.map(cf =>
+                cf.id === chapterFile.id
+                    ? { ...cf, uploadStatus: 'success', uploadProgress: 100 }
+                    : cf
+            ));
 
-                    // Check if completed
-                    if (progressData.status === 'completed') {
-                        clearInterval(pollInterval);
-                        setChapterFiles(prev => prev.map(cf =>
-                            cf.id === chapterFileId
-                                ? { ...cf, uploadStatus: 'success', uploadProgress: 100 }
-                                : cf
-                        ));
-                        resolve();
-                    } else if (progressData.status === 'failed') {
-                        clearInterval(pollInterval);
-                        setChapterFiles(prev => prev.map(cf =>
-                            cf.id === chapterFileId
-                                ? { ...cf, uploadStatus: 'error', error: progressData.error }
-                                : cf
-                        ));
-                        reject(new Error(progressData.error || 'فشلت عملية الرفع'));
-                    }
-
-                } catch (error: any) {
-                    clearInterval(pollInterval);
-                    reject(error);
-                }
-            }, 500);
-        });
+        } catch (error: any) {
+            throw error;
+        }
     }
 
     return (

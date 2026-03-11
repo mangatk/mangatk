@@ -304,42 +304,43 @@ class MangaCreateSerializer(serializers.ModelSerializer):
 
 
 class ChapterCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating chapters with images"""
-    images = serializers.ListField(
-        child=serializers.ImageField(),
+    """Serializer for creating chapters with ImgBB URLs passed from the client"""
+    image_urls = serializers.ListField(
+        child=serializers.URLField(),
         write_only=True,
         required=False
     )
     
     class Meta:
         model = Chapter
-        fields = ['id', 'manga', 'number', 'title', 'release_date', 'images']
+        fields = ['id', 'manga', 'number', 'title', 'release_date', 'image_urls']
         read_only_fields = ['id']
     
     def create(self, validated_data):
-        images = validated_data.pop('images', [])
+        image_urls = validated_data.pop('image_urls', [])
         chapter = Chapter.objects.create(**validated_data)
         
-        # Upload images if provided
-        if images:
-            from .services import ImgBBService
-            results = ImgBBService.upload_chapter_images(
-                chapter.manga.title,
-                chapter.number,
-                images
-            )
-            
-            # Create ChapterImage records
-            for result in results:
-                ChapterImage.objects.create(
-                    chapter=chapter,
-                    image_url=result['display_url'],
-                    page_number=result['page_number'],
-                    original_filename=result['original_filename'],
-                    width=result.get('width'),
-                    height=result.get('height')
+        # Save image URLs instantly directly to the database
+        if image_urls:
+            chapter_images = []
+            for i, url in enumerate(image_urls):
+                chapter_images.append(
+                    ChapterImage(
+                        chapter=chapter,
+                        image_url=url,
+                        page_number=i + 1,
+                        original_filename=f"page_{i + 1}.jpg"
+                    )
                 )
-        
+            # Bulk create for maximum performance
+            ChapterImage.objects.bulk_create(chapter_images)
+            
+            # Update chapter counts
+            chapter.upload_status = 'completed'
+            chapter.total_images_count = len(image_urls)
+            chapter.uploaded_images_count = len(image_urls)
+            chapter.save(update_fields=['upload_status', 'total_images_count', 'uploaded_images_count'])
+            
         return chapter
 
 
