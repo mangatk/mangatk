@@ -18,29 +18,49 @@ export interface ImgbbUploadResult {
  * @param file - The image file to upload
  * @returns The uploaded image URL
  */
-export async function uploadToImgbb(file: File): Promise<string> {
+export async function uploadToImgbb(file: File, retries = 3): Promise<string> {
     const formData = new FormData();
     formData.append('image', file);
 
-    try {
-        const res = await fetch(`${IMGBB_API_URL}?key=${IMGBB_API_KEY}`, {
-            method: 'POST',
-            body: formData,
-        });
+    for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+            const res = await fetch(`${IMGBB_API_URL}?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData,
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (data.success) {
-            return data.data.url;
+            if (data.success) {
+                return data.data.url;
+            }
+
+            // If it's a 4xx error (except 429 Too Many Requests), fail immediately without retry
+            if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+                throw new Error(data.error?.message || 'فشل رفع الصورة إلى imgbb');
+            }
+
+            // Treat 429 or 5xx as a temporary server issue; throw to trigger the retry logic
+            throw new Error(`Server error: ${res.status}`);
+
+        } catch (err: any) {
+            // For explicit non-retryable API errors
+            if (err.message && !err.message.includes('Server error')) {
+                if (err.message.includes('imgbb') || err.message.includes('فشل')) {
+                    throw err;
+                }
+            }
+
+            if (attempt < retries - 1) {
+                console.warn(`ImgBB upload failed (attempt ${attempt + 1}/${retries}). Retrying...`);
+                // Exponential backoff: 1s, 2s...
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+            } else {
+                throw new Error('فشل الاتصال بـ imgbb. تحقق من اتصال الإنترنت.');
+            }
         }
-
-        throw new Error(data.error?.message || 'فشل رفع الصورة إلى imgbb');
-    } catch (err: any) {
-        if (err.message.includes('imgbb') || err.message.includes('فشل')) {
-            throw err;
-        }
-        throw new Error('فشل الاتصال بـ imgbb. تحقق من اتصال الإنترنت.');
     }
+    throw new Error('فشل الاتصال بـ imgbb. تحقق من اتصال الإنترنت.');
 }
 
 /**
@@ -145,7 +165,7 @@ export async function uploadMultipleWithProgress(
     const totalFiles = files.length;
     let completedCount = 0;
 
-    const CONCURRENCY_LIMIT = 5;
+    const CONCURRENCY_LIMIT = 3;
     const tasks = files.map((file, index) => {
         return async () => {
             // Upload without individual progress to simplify parallel execution
