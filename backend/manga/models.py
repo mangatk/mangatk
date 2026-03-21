@@ -728,4 +728,42 @@ class FcmToken(models.Model):
     def __str__(self):
         return f"{self.user_id}"
 
+# ==================== SYSTEM TRACKING ====================
 
+class ImgBBUploadStats(models.Model):
+    """
+    يتتبع إجمالي عدد الصور المرفوعة إلى ImgBB يومياً من جميع المدراء
+    """
+    date = models.DateField(unique=True, auto_now_add=True, help_text="تاريخ الرفع")
+    count = models.PositiveIntegerField(default=0, help_text="عدد الصور المرفوعة في هذا اليوم")
+    
+    class Meta:
+        ordering = ['-date']
+        verbose_name = 'ImgBB Upload Stat'
+        verbose_name_plural = 'ImgBB Upload Stats'
+        
+    def __str__(self):
+        return f"{self.date}: {self.count} images"
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('points', 'Points / Economy'),
+        ('translation', 'Translation Complete'),
+        ('upload', 'Upload Complete'),
+        ('chapter', 'New Chapter Released')
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', help_text="The user receiving this notification")
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    link = models.CharField(max_length=500, blank=True, null=True, help_text="The Frontend URL to redirect to when clicked")
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='points')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title} to {self.user.username}"

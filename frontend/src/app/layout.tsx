@@ -5,8 +5,8 @@ import { Auth0ProviderWrapper } from '@/context/Auth0ProviderWrapper';
 import { AuthProvider } from '@/context/AuthContext';
 import { MSWProvider } from '@/mocks/MSWProvider';
 import { Inter } from 'next/font/google';
-import OneSignalInit from '@/components/OneSignalInit';
-
+import { ToastProvider } from '@/components/ToastProvider';
+import { NotificationProvider } from '@/context/NotificationContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -22,11 +22,13 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" data-scroll-behavior="smooth">
       <body className={inter.className}>
-        {/* <OneSignalInit /> */}
+        <ToastProvider />
         <MSWProvider>
           <Auth0ProviderWrapper>
             <AuthProvider>
-              {children}
+              <NotificationProvider>
+                {children}
+              </NotificationProvider>
             </AuthProvider>
           </Auth0ProviderWrapper>
         </MSWProvider>

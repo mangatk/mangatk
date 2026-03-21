@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { FaSun, FaMoon, FaSignOutAlt } from 'react-icons/fa';
+import { FaSun, FaMoon, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import { SearchBar } from './SearchBar';
+import { useNotifications } from '@/context/NotificationContext';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementToast } from './AchievementToast';
 import { ProxyImage } from './ProxyImage';
@@ -13,6 +14,8 @@ export function Header() {
   const { user, login, register, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const { notifications, unreadCount, markAllAsRead } = useNotifications();
 
   const { newUnlock, closeNotification } = useAchievements();
 
@@ -80,6 +83,56 @@ export function Header() {
             <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
               {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon />}
             </button>
+
+            {user && (
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setNotifMenuOpen(!notifMenuOpen);
+                    if (!notifMenuOpen && unreadCount > 0) markAllAsRead();
+                  }} 
+                  className="p-2 rounded-full relative hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+                >
+                  <FaBell className="text-xl" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/4 bg-red-600 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40 cursor-default" onClick={() => setNotifMenuOpen(false)} />
+                    <div className="absolute top-full -left-24 sm:-left-32 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 flex justify-between items-center">
+                        <span>الإشعارات</span>
+                      </div>
+                      <div className="max-h-[60vh] overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.slice(0, 15).map((n) => (
+                            <Link 
+                              key={n.id} 
+                              href={n.link || '#'} 
+                              onClick={() => setNotifMenuOpen(false)}
+                              className="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors"
+                            >
+                              <div className="font-semibold text-sm text-gray-900 dark:text-white mb-1">{n.title}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{n.message}</div>
+                            </Link>
+                          ))
+                        ) : (
+                          <div className="px-6 py-8 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+                            <FaBell className="text-gray-300 dark:text-gray-600 text-4xl mb-2" />
+                            لا توجد إشعارات حالياً
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {user ? (
               <div className="relative">

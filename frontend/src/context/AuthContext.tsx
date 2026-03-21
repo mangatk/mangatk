@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isMounted) {
           setUser(null);
           setToken(null);
+          localStorage.removeItem('manga_token');
           setIsSyncing(false);
         }
         return;
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const accessToken = await getAccessTokenSilently();
 
         if (isMounted) setToken(accessToken);
+        localStorage.setItem('manga_token', accessToken);
 
         // Fetch our custom user profile from Django backend
         const res = await fetch(`${API_URL}/auth/profile/`, {

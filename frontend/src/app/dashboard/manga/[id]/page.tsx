@@ -10,6 +10,7 @@ import { MultiChapterUploadModal } from '@/components/MultiChapterUploadModal';
 import { parseChapterFileName, extractImagesFromZip } from '@/utils/chapterFileParser';
 import { uploadMultipleWithProgress } from '@/services/imgbb';
 import { useAuth } from '@/context/AuthContext';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -62,7 +63,8 @@ export default function MangaDetailPage() {
     }
 
     async function deleteChapter(chapterId: string) {
-        if (!confirm('هل أنت متأكد من حذف هذا الفصل؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذا الفصل؟');
+        if (!confirmed) return;
 
         try {
             await fetch(`${API_URL}/chapters/${chapterId}/`, { method: 'DELETE' });
@@ -121,7 +123,8 @@ export default function MangaDetailPage() {
                                 </Link>
                                 <button
                                     onClick={async () => {
-                                        if (!confirm('هل أنت متأكد من حذف هذه المانجا؟')) return;
+                                        const confirmed = await confirmAction('هل أنت متأكد من حذف هذه المانجا؟');
+                                        if (!confirmed) return;
                                         try {
                                             await fetch(`${API_URL}/manga/${mangaId}/`, { method: 'DELETE' });
                                             router.push('/dashboard/manga');

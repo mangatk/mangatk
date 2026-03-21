@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaCreditCard, FaCheck, FaPercent, FaTimes, FaStar } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -45,22 +47,32 @@ export default function SubscriptionsPage() {
             if (res.ok) {
                 const data = await res.json();
                 setPlans(Array.isArray(data) ? data : data.results || []);
+            } else {
+                toast.error('فشل في جلب خطط الاشتراك');
             }
         } catch (error) {
             console.error('Error fetching plans:', error);
+            toast.error('حدث خطأ أثناء جلب خطط الاشتراك');
         } finally {
             setLoading(false);
         }
     }
 
     async function deletePlan(id: string) {
-        if (!confirm('هل أنت متأكد من حذف هذه الخطة؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذه الخطة؟');
+        if (!confirmed) return;
 
         try {
-            await fetch(`${API_URL}/subscriptions/${id}/`, { method: 'DELETE' });
-            setPlans(plans.filter(p => p.id !== id));
+            const res = await fetch(`${API_URL}/subscriptions/${id}/`, { method: 'DELETE' });
+            if (res.ok) {
+                setPlans(plans.filter(p => p.id !== id));
+                toast.success('تم حذف الخطة بنجاح');
+            } else {
+                toast.error('فشل في حذف الخطة');
+            }
         } catch (error) {
             console.error('Error deleting plan:', error);
+            toast.error('حدث خطأ أثناء حذف الخطة');
         }
     }
 
@@ -254,15 +266,16 @@ function PlanModal({ plan, onClose, onSuccess }: { plan: SubscriptionPlan | null
             });
 
             if (res.ok) {
+                toast.success('تم الحفظ بنجاح');
                 onSuccess();
             } else {
                 const error = await res.json();
                 console.error('Error:', error);
-                alert('حدث خطأ أثناء الحفظ');
+                toast.error('حدث خطأ أثناء الحفظ');
             }
         } catch (error) {
             console.error('Error saving plan:', error);
-            alert('حدث خطأ أثناء الحفظ');
+            toast.error('حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }

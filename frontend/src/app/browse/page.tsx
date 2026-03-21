@@ -243,6 +243,8 @@ import { FaLayerGroup, FaSearch, FaRandom, FaFilter } from 'react-icons/fa'; // 
 function BrowseContent() {
    const searchParams = useSearchParams();
    const initialGenre = searchParams.get('genre');
+   const initialAuthor = searchParams.get('author') || undefined;
+   const initialArtist = searchParams.get('artist') || undefined;
 
    const [manga, setManga] = useState<Manga[]>([]);
    const [loading, setLoading] = useState(true);
@@ -251,7 +253,9 @@ function BrowseContent() {
       query: '',
       status: 'All',
       categories: initialGenre ? [initialGenre] : [],
-      sortBy: 'Latest Chapter'
+      sortBy: 'Latest Chapter',
+      author: initialAuthor,
+      artist: initialArtist
    });
 
    // Pagination state

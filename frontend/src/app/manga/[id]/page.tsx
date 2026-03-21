@@ -9,7 +9,6 @@ import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { ProxyImage } from '@/components/ProxyImage';
-import { OneSignalToast } from '@/components/OneSignalToast';
 import { Toaster } from 'react-hot-toast';
 import {
   FaBookOpen, FaStar, FaUser, FaClock, FaLayerGroup,
@@ -172,7 +171,6 @@ export default function MangaDetail() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12 transition-colors duration-300">
       <Toaster />
-      <OneSignalToast showOnMount={true} delay={3000} />
 
       <Header />
 
@@ -248,15 +246,15 @@ export default function MangaDetail() {
             </h1>
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6 text-sm font-medium">
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
-                <FaUser className="text-blue-500" />
-                <span className="text-gray-700 dark:text-gray-300">{manga.author}</span>
-              </div>
+              <Link href={`/browse?author=${encodeURIComponent(manga.author)}`} className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-blue-600 hover:text-blue-500 cursor-pointer">
+                <FaUser />
+                <span className="font-bold">{manga.author}</span>
+              </Link>
               {manga.artist && (
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
-                  <span className="text-pink-500 font-bold">🖌️</span>
-                  <span className="text-gray-700 dark:text-gray-300">{manga.artist}</span>
-                </div>
+                <Link href={`/browse?artist=${encodeURIComponent(manga.artist)}`} className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-pink-500 hover:text-pink-400 cursor-pointer">
+                  <span className="font-bold">🖌️</span>
+                  <span className="font-bold">{manga.artist}</span>
+                </Link>
               )}
               <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
                 <FaStar className="text-yellow-400 text-lg" />

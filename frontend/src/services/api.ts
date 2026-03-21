@@ -94,6 +94,14 @@ export async function getMangaList(page: number = 1, pageSize: number = 20, filt
     params.append('type', filters.type.toLowerCase());
   }
 
+  // Exact Match Creator filters
+  if (filters?.author) {
+    params.append('author', filters.author);
+  }
+  if (filters?.artist) {
+    params.append('artist', filters.artist);
+  }
+
   // دعم تصفية الأنواع (Genres)
   if (filters?.categories && filters.categories.length > 0) {
     filters.categories.forEach(cat => params.append('genre', cat));

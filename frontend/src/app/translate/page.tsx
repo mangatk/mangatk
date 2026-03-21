@@ -26,7 +26,7 @@ interface TranslationJob {
 }
 
 export default function TranslatePage() {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, token } = useAuth();
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [currentJob, setCurrentJob] = useState<TranslationJob | null>(null);
@@ -47,7 +47,7 @@ export default function TranslatePage() {
 
     const fetchUserPoints = async () => {
         try {
-            const token = localStorage.getItem('manga_token');
+            if (!token) return;
             const res = await fetch(`${API_URL}/auth/profile/`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -119,7 +119,7 @@ export default function TranslatePage() {
         formData.append('target_language', targetLanguage);
 
         try {
-            const token = localStorage.getItem('manga_token');
+            if (!token) throw new Error("No auth token");
             const res = await fetch(`${API_URL}/translate/upload/`, {
                 method: 'POST',
                 headers: {
@@ -156,7 +156,7 @@ export default function TranslatePage() {
 
     const fetchStatus = async (jobId: string) => {
         try {
-            const token = localStorage.getItem('manga_token');
+            if (!token) return;
             const res = await fetch(`${API_URL}/translate/status/${jobId}/`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -192,7 +192,7 @@ export default function TranslatePage() {
 
     const fetchPreview = async (jobId: string) => {
         try {
-            const token = localStorage.getItem('manga_token');
+            if (!token) return;
             const res = await fetch(`${API_URL}/translate/preview/${jobId}/`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -229,9 +229,8 @@ export default function TranslatePage() {
     };
 
     const handleDownload = () => {
-        if (!currentJob) return;
+        if (!currentJob || !token) return;
 
-        const token = localStorage.getItem('manga_token');
         const downloadUrl = `${API_URL}/translate/download/${currentJob.job_id}/`;
 
         // Create temporary link and trigger download

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Achievement, RARITY_COLORS } from '@/data/achievements';
 import confetti from 'canvas-confetti';
 import { FaTimes, FaStar } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 
 export function AchievementToast({ achievement, onClose }: { achievement: Achievement | null, onClose: () => void }) {
@@ -11,10 +12,10 @@ export function AchievementToast({ achievement, onClose }: { achievement: Achiev
   useEffect(() => {
     if (achievement) {
       setVisible(true);
-      // تأثير صوتي بسيط (اختياري)
-      const audio = new Audio('/sounds/achievement.mp3'); // تأكد من وجود ملف صوتي
-      audio.volume = 0.5;
-      audio.play().catch(() => {}); // تجاهل الخطأ إذا لم يكن هناك ملف
+      // تأثير صوتي بسيط (اختياري) - معطل حالياً لأنه لا يوجد ملف
+      // const audio = new Audio('/sounds/achievement.mp3'); 
+      // audio.volume = 0.5;
+      // audio.play().catch(() => {});
 
       // إطلاق قصاصات الزينة (Confetti)
       confetti({
@@ -81,7 +82,7 @@ export function AchievementToast({ achievement, onClose }: { achievement: Achiev
               onClick={() => {
                  // سنقوم هنا بحفظ اللقب وتفعيله فوراً
                  localStorage.setItem('equipped_title', achievement.id);
-                 alert(`تم وضع اللقب "${achievement.title}" تحت اسمك!`);
+                 toast.success(`تم وضع اللقب "${achievement.title}" تحت اسمك!`);
                  onClose();
               }}
               className={`px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r ${bgGradient} hover:scale-105 transition-transform shadow-lg`}

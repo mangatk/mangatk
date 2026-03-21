@@ -31,6 +31,8 @@ export interface FilterState {
   status?: string;
   categories?: string[];
   type?: string;
+  author?: string;
+  artist?: string;
   // التعديل هنا: جعلناها string لتقبل القيم القادمة من القوائم المنسدلة مثل "Latest Chapter"
   sortBy?: string;
 }

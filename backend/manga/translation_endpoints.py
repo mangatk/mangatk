@@ -18,7 +18,7 @@ from rest_framework import status
 from django.core.files.storage import default_storage
 from django.conf import settings
 
-from .models import Manga, Chapter
+from .models import Manga, Chapter, Notification
 from .translation_service import TranslationService
 import logging
 
@@ -104,6 +104,7 @@ def upload_for_translation(request):
             'progress': 0,
             'message': 'تم رفع الملف بنجاح',
             'error': None,
+            'admin_id': request.user.id,
             'created_at': str(uuid.uuid1().time)
         }
         
@@ -172,6 +173,19 @@ def start_translation(request, job_id):
             
             logger.info(f"Translation job {job_id} completed successfully")
             
+            # Notify Admin
+            from django.contrib.auth import get_user_model
+            try:
+                Notification.objects.create(
+                    user=request.user,
+                    title="اكتملت الترجمة",
+                    message=f"تم الانتهاء من ترجمة الفصل بنجاح.",
+                    link="/dashboard/translate",
+                    notification_type='translation'
+                )
+            except Exception as e:
+                logger.error(f"Failed to create admin notification: {e}")
+                
             return Response({
                 'status': 'completed',
                 'message': job['message'],

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaStar, FaLayerGroup, FaFilter } from 'react-icons/fa';
 import { ProxyImage } from '@/components/ProxyImage';
 import { MangaCardSkeleton } from '@/components/Skeleton';
+import toast from 'react-hot-toast';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -126,7 +128,8 @@ export default function MangaListPage() {
     }
 
     async function deleteManga(id: string) {
-        if (!confirm('هل أنت متأكد من حذف هذه المانجا؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذه المانجا؟');
+        if (!confirmed) return;
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -144,7 +147,7 @@ export default function MangaListPage() {
             setManga(manga.filter(m => m.id !== id));
         } catch (error: any) {
             console.error('Error deleting manga:', error);
-            alert(error.message || 'حدث خطأ أثناء الحذف');
+            toast.error(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 

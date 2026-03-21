@@ -544,3 +544,10 @@ class TranslationJobSerializer(serializers.ModelSerializer):
             'translation_results', 'output_file_path', 'error_message',
             'created_at', 'updated_at', 'completed_at'
         ]
+
+from .models import Notification
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'link', 'notification_type', 'is_read', 'created_at']

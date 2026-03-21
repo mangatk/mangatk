@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaTrash, FaComments, FaSearch, FaUser } from 'react-icons/fa';
+import { FaTrash, FaCheck, FaTimes, FaSearch, FaCommentDots, FaUser, FaComments } from 'react-icons/fa';
 import { useAuth } from '@/context/AuthContext';
 import { CommentItemSkeleton } from '@/components/DashboardSkeleton';
+import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -62,26 +63,65 @@ export default function CommentsPage() {
     };
 
     async function deleteComment(id: string) {
-        if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+        toast.custom((t) => (
+            <div
+                className={`${t.visible ? 'animate-enter' : 'animate-leave'
+                    } max-w-md w-full bg-gray-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+            >
+                <div className="flex-1 w-0 p-4">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0 pt-0.5">
+                            <FaTrash className="h-6 w-6 text-red-500" />
+                        </div>
+                        <div className="ml-3 flex-1">
+                            <p className="text-sm font-medium text-white">
+                                تأكيد الحذف
+                            </p>
+                            <p className="mt-1 text-sm text-gray-400">
+                                هل أنت متأكد من حذف هذا التعليق؟ لا يمكن التراجع عن هذا الإجراء.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex border-l border-gray-700">
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                const token = localStorage.getItem('manga_token');
+                                const res = await fetch(`${API_URL}/comments/${id}/`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`
+                                    }
+                                });
 
-        try {
-            const token = localStorage.getItem('manga_token');
-            const res = await fetch(`${API_URL}/comments/${id}/`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+                                if (!res.ok) {
+                                    throw new Error('فشل الحذف');
+                                }
 
-            if (!res.ok) {
-                throw new Error('فشل الحذف');
-            }
-
-            setComments(comments.filter(c => c.id !== id));
-        } catch (error: any) {
-            console.error('Error deleting comment:', error);
-            alert(error.message || 'حدث خطأ أثناء الحذف');
-        }
+                                setComments(comments.filter(c => c.id !== id));
+                                toast.success('تم حذف التعليق بنجاح!');
+                            } catch (error: any) {
+                                console.error('Error actions comment:', error);
+                                toast.error(error.message || 'حدث خطأ أثناء الحذف');
+                            }
+                        }}
+                        className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                        <FaCheck className="ml-2" />
+                        نعم، احذف
+                    </button>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-400 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                        <FaTimes className="ml-2" />
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
     }
 
     const filteredComments = comments.filter(c =>

@@ -32,10 +32,9 @@ export function Auth0ProviderWrapper({ children }: { children: React.ReactNode }
             authorizationParams={{
                 redirect_uri: typeof window !== 'undefined' ? window.location.origin : '',
                 audience: audience,
-                scope: 'openid profile email offline_access',
+                scope: 'openid profile email',
             }}
             cacheLocation="localstorage"
-            useRefreshTokens={true}
         >
             {children}
         </Auth0Provider>

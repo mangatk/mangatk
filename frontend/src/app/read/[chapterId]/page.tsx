@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/context/AuthContext';
+import { Header } from '@/components/Header';
 import { ProxyImage } from '@/components/ProxyImage';
 import { CommentsSection } from '@/components/CommentsSection';
 import { ChapterRating } from '@/components/ChapterRating';
@@ -41,6 +42,9 @@ export default function ReaderPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false); // New: حالة ملء الشاشة
 
+  // Guard to prevent double execution in Strict Mode
+  const hasIncrementedRef = useRef(false);
+
   // 1. جلب البيانات
   useEffect(() => {
     const fetchImages = async () => {
@@ -67,24 +71,28 @@ export default function ReaderPage() {
             status: 'ongoing',
             lastUpdated: '',
             author: '',
+            story_type: 'manhwa',
             views: 0,
             category: ''
           }, chapterId, chapterData.number);
 
-          // زيادة عدد المشاهدات وكسب النقاط
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-          fetch(`${API_URL}/chapters/${chapterId}/increment_views/`, {
-            method: 'POST',
-            headers: { ...getAuthHeaders() },
-          })
-            .then(res => {
-              if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
-              }
-              return res.json();
+          // زيادة عدد المشاهدات وكسب النقاط (مع الحماية من التكرار)
+          if (!hasIncrementedRef.current) {
+            hasIncrementedRef.current = true;
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            fetch(`${API_URL}/chapters/${chapterId}/increment_views/`, {
+              method: 'POST',
+              headers: { ...getAuthHeaders() },
             })
-            .then(data => console.log('Points earned:', data.points_earned, 'Total:', data.total_points))
-            .catch(err => console.log('Views increment:', err));
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+              })
+              .then(data => console.log('Points earned:', data.points_earned, 'Total:', data.total_points))
+              .catch(err => console.log('Views increment:', err));
+          }
 
         } else {
           console.error('Failed to load chapter');
@@ -207,10 +215,11 @@ export default function ReaderPage() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-gray-200 font-sans selection:bg-blue-500 selection:text-white">
+      <Header />
 
-      {/* --- Header --- */}
+      {/* --- Reader Controls Header --- */}
       <header
-        className={`fixed top-0 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
+        className={`fixed top-16 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="flex items-center gap-3 md:gap-4">
           <Link href={`/manga/${chapter.mangaId}`} className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full">

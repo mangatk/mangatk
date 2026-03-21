@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ProxyImage } from '@/components/ProxyImage';
 import * as commentsAPI from '@/services/comments';
 import type { Comment } from '@/services/comments';
+import { confirmAction } from '@/utils/confirmAction';
 
 // 1. تعريف واجهة الـ Props للمكون الفرعي
 interface CommentItemProps {
@@ -354,7 +355,8 @@ export function CommentsSection({ chapterId, mangaId }: CommentsSectionProps) {
   }
 
   async function handleDelete(commentId: string) {
-    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+    const confirmed = await confirmAction('هل أنت متأكد من حذف هذا التعليق؟');
+    if (!confirmed) return;
 
     try {
       await commentsAPI.deleteComment(commentId, getAuthHeaders() as HeadersInit);

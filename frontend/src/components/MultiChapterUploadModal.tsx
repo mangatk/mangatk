@@ -7,12 +7,14 @@ import { parseChapterFileName, countImagesInZip, extractImagesFromZip } from '@/
 import { uploadMultipleWithProgress } from '@/services/imgbb';
 import { EnhancedUploadProgress } from './EnhancedUploadProgress';
 import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 interface ChapterFile {
     id: string;
-    file: File;
+    file?: File;
+    imageFiles?: File[];
     number: string;
     title: string;
     imageCount: number;
@@ -62,7 +64,7 @@ export function MultiChapterUploadModal({
         );
 
         if (zipFiles.length === 0) {
-            alert('الرجاء اختيار ملفات ZIP أو CBZ فقط');
+            toast.error('الرجاء اختيار ملفات ZIP أو CBZ فقط');
             return;
         }
 
@@ -86,13 +88,66 @@ export function MultiChapterUploadModal({
 
         // Count images for each file
         for (const chapterFile of newChapterFiles) {
-            const count = await countImagesInZip(chapterFile.file, getAuthHeaders());
-            setChapterFiles(prev => prev.map(cf =>
-                cf.id === chapterFile.id
-                    ? { ...cf, imageCount: count, isCountingImages: false }
-                    : cf
-            ));
+            if (chapterFile.file) {
+                const count = await countImagesInZip(chapterFile.file, getAuthHeaders());
+                setChapterFiles(prev => prev.map(cf =>
+                    cf.id === chapterFile.id
+                        ? { ...cf, imageCount: count, isCountingImages: false }
+                        : cf
+                ));
+            }
         }
+
+        // Clear input
+        e.target.value = '';
+    }
+
+    // Handle folder selection
+    async function handleFolderSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const folderGroups = new Map<string, File[]>();
+        
+        for (const file of files) {
+            const pathParts = file.webkitRelativePath.split('/');
+            if (pathParts.length > 1) {
+                // Get the immediate parent folder of the image
+                const folderName = pathParts[pathParts.length - 2];
+                if (file.type.startsWith('image/')) {
+                    if (!folderGroups.has(folderName)) {
+                        folderGroups.set(folderName, []);
+                    }
+                    folderGroups.get(folderName)!.push(file);
+                }
+            }
+        }
+
+        if (folderGroups.size === 0) {
+            toast.error('لم يتم العثور على أي مجلدات تحتوي على صور');
+            return;
+        }
+
+        const newChapterFiles: ChapterFile[] = [];
+        folderGroups.forEach((imageFiles, folderName) => {
+            const parsed = parseChapterFileName(folderName);
+            newChapterFiles.push({
+                id: `${Date.now()}-${Math.random()}`,
+                imageFiles: imageFiles, // store raw files
+                number: parsed.number,
+                title: parsed.title || `${mangaTitle} - ${folderName}`,
+                imageCount: imageFiles.length,
+                isCountingImages: false,
+                isEditing: false,
+                uploadStatus: 'pending',
+                uploadProgress: 0,
+            });
+        });
+
+        setChapterFiles(prev => {
+            const combined = [...prev, ...newChapterFiles];
+            return combined.sort((a, b) => parseFloat(a.number || '0') - parseFloat(b.number || '0'));
+        });
 
         // Clear input
         e.target.value = '';
@@ -118,15 +173,15 @@ export function MultiChapterUploadModal({
     }
 
     // Upload all chapters
-    async function handleUploadAll() {
+    const handleUploadAll = async () => {
         if (chapterFiles.length === 0) {
-            alert('الرجاء إضافة ملفات أولاً');
+            toast.error('الرجاء إضافة ملفات أولاً');
             return;
         }
 
         // Check if any file is still counting images
         if (chapterFiles.some(cf => cf.isCountingImages)) {
-            alert('الرجاء الانتظار حتى يتم حساب عدد الصور');
+            toast.error('الرجاء الانتظار حتى يتم حساب عدد الصور');
             return;
         }
 
@@ -169,8 +224,13 @@ export function MultiChapterUploadModal({
     // Upload a single chapter
     async function uploadSingleChapter(chapterFile: ChapterFile): Promise<void> {
         try {
-            // 1. Extract Images locally
-            const imageFiles = await extractImagesFromZip(chapterFile.file);
+            // 1. Extract Images locally or use raw images
+            let imageFiles: File[] = [];
+            if (chapterFile.file) {
+                imageFiles = await extractImagesFromZip(chapterFile.file);
+            } else if (chapterFile.imageFiles) {
+                imageFiles = chapterFile.imageFiles;
+            }
 
             if (imageFiles.length === 0) {
                 throw new Error("لا توجد صور في الملف المضغوط");
@@ -235,24 +295,46 @@ export function MultiChapterUploadModal({
                     </button>
                 </div>
 
-                {/* File Upload Area */}
                 <div className="mb-6">
-                    <label className="block text-gray-300 mb-2">ملفات الفصول (ZIP أو CBZ) *</label>
-                    <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                        <input
-                            type="file"
-                            accept=".zip,.cbz"
-                            multiple
-                            onChange={handleFileSelect}
-                            className="hidden"
-                            id="multi-chapter-files"
-                            disabled={isUploading}
-                        />
-                        <label htmlFor="multi-chapter-files" className={isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}>
-                            <FaUpload className="text-3xl text-gray-500 mx-auto mb-2" />
-                            <p className="text-gray-400">اضغط لاختيار ملفات متعددة</p>
-                            <p className="text-gray-500 text-sm">ZIP أو CBZ - يمكن اختيار أكثر من ملف</p>
-                        </label>
+                    <label className="block text-gray-300 mb-2">إضافة الفصول</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* ZIP Upload */}
+                        <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                            <input
+                                type="file"
+                                accept=".zip,.cbz"
+                                multiple
+                                onChange={handleFileSelect}
+                                className="hidden"
+                                id="multi-chapter-files"
+                                disabled={isUploading}
+                            />
+                            <label htmlFor="multi-chapter-files" className={isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}>
+                                <FaUpload className="text-3xl text-gray-500 mx-auto mb-2" />
+                                <p className="text-gray-400 font-bold mb-1">رفع ملفات مضغوطة</p>
+                                <p className="text-gray-500 text-xs">اختر عدة ملفات ZIP أو CBZ</p>
+                            </label>
+                        </div>
+
+                        {/* Folder Upload */}
+                        <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+                            <input
+                                type="file"
+                                // @ts-ignore - webkitdirectory is non-standard but widely supported
+                                webkitdirectory="true"
+                                directory="true"
+                                multiple
+                                onChange={handleFolderSelect}
+                                className="hidden"
+                                id="multi-chapter-folders"
+                                disabled={isUploading}
+                            />
+                            <label htmlFor="multi-chapter-folders" className={isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}>
+                                <FaUpload className="text-3xl text-purple-800 mx-auto mb-2" />
+                                <p className="text-gray-400 font-bold mb-1">رفع المجلدات مباشرة</p>
+                                <p className="text-gray-500 text-xs">اختر مجلداً يحتوي على مجلدات فرعية للفصول</p>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -342,7 +424,7 @@ export function MultiChapterUploadModal({
                                                         الفصل {cf.number}: {cf.title}
                                                     </h4>
                                                     <p className="text-gray-400 text-sm mt-1">
-                                                        {cf.file.name} • {(cf.file.size / 1024 / 1024).toFixed(2)} MB
+                                                        {cf.file ? cf.file.name : `مجلد: ${cf.title}`} {cf.file && `• ${(cf.file.size / 1024 / 1024).toFixed(2)} MB`}
                                                         {cf.isCountingImages ? (
                                                             <span className="ml-2 text-blue-400">جاري حساب الصور...</span>
                                                         ) : (

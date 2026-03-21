@@ -9,9 +9,8 @@ from . import translate_dashboard_views
 from . import user_translation_views
 from . import zip_analysis
 from . import subscription_views
+from . import imgbb_tracking_views
 from .views import register_fcm_token
-from .views import onesignal_test
-
 
 
 # Create router and register viewsets
@@ -28,6 +27,7 @@ router.register(r'ratings', views.RatingViewSet, basename='rating')
 router.register(r'comments', views.CommentViewSet, basename='comment')
 router.register(r'achievements', views.AchievementViewSet, basename='achievement')
 router.register(r'reading-history', views.ReadingHistoryViewSet, basename='reading-history')
+router.register(r'notifications', views.NotificationViewSet, basename='notification')
 
 app_name = 'manga'
 
@@ -48,6 +48,10 @@ urlpatterns = [
     # Subscription endpoints
     path('subscriptions/<uuid:plan_id>/subscribe/', subscription_views.subscribe_to_plan, name='subscribe-to-plan'),
     path('subscriptions/current/', subscription_views.get_current_subscription, name='current-subscription'),
+    
+    # ImgBB Tracking endpoints
+    path('imgbb/stats/', imgbb_tracking_views.get_imgbb_stats, name='imgbb-stats'),
+    path('imgbb/track/', imgbb_tracking_views.track_imgbb_upload, name='imgbb-track'),
     
     # AI Translation endpoints (Admin)
     path('translation/ai-models/', translation_views.ai_models_view, name='ai-models-list'),
@@ -82,7 +86,6 @@ urlpatterns = [
     path('translation/new/save/<str:job_id>/', translation_endpoints.save_translated_chapter, name='translation-new-save'),
     path('translation/new/delete/<str:job_id>/', translation_endpoints.delete_translation_job, name='translation-new-delete'),
     path("push/register-token/", register_fcm_token),
-    path("push/onesignal/test/", onesignal_test),
     path("proxy-image/", views.proxy_image, name="proxy-image"),
 
     # Router URLs (must be LAST to avoid conflicts with specific endpoints above)

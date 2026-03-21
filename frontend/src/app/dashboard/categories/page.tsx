@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaLayerGroup } from 'react-icons/fa';
 import { DashboardListSkeleton } from '@/components/DashboardSkeleton';
+import toast from 'react-hot-toast';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -37,7 +39,8 @@ export default function CategoriesPage() {
     }
 
     async function deleteCategory(slug: string) {
-        if (!confirm('هل أنت متأكد من حذف هذه الفئة؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذه الفئة؟');
+        if (!confirmed) return;
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -55,7 +58,7 @@ export default function CategoriesPage() {
             setCategories(categories.filter(c => c.slug !== slug));
         } catch (error: any) {
             console.error('Error deleting category:', error);
-            alert(error.message || 'حدث خطأ أثناء الحذف');
+            toast.error(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
@@ -176,7 +179,7 @@ function CategoryModal({ category, onClose, onSuccess }: { category: Category | 
             onSuccess();
         } catch (error: any) {
             console.error('Error saving category:', error);
-            alert(error.message || 'حدث خطأ أثناء الحفظ');
+            toast.error(error.message || 'حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }

@@ -16,7 +16,7 @@ import io
 import os
 from datetime import datetime
 
-from .models import Manga, Chapter, ChapterImage
+from .models import Manga, Chapter, ChapterImage, Notification, UserBookmark
 from .services.imgbb import ImgBBService
 from .services.async_upload import async_upload_service
 import logging
@@ -145,6 +145,7 @@ def start_async_chapter_upload(request):
             'failed': 0,
             'chapter_id': str(chapter.id),
             'manga_id': str(manga_id),
+            'uploader_id': request.user.id,
             'results': [],
             'errors': []
         }, timeout=3600)  # 1 hour
@@ -198,6 +199,11 @@ def start_async_chapter_upload(request):
                 job_data['results'].append(result)
                 cache.set(f'upload_job_{job_id}', job_data, timeout=3600)
         
+        # Grab variables for async scope
+        user_id = request.user.id if hasattr(request, 'user') and request.user.is_authenticated else None
+        manga_id = chapter.manga.id
+        chapter_title = f"{chapter.manga.title} - Chapter {chapter.number}"
+        
         # Complete callback
         def on_complete(results):
             job_data = cache.get(f'upload_job_{job_id}')
@@ -208,11 +214,52 @@ def start_async_chapter_upload(request):
                 job_data['errors'] = results['errors']
                 cache.set(f'upload_job_{job_id}', job_data, timeout=3600)
             
-            # Update chapter status
-            chapter.upload_status = 'completed'
-            chapter.save(update_fields=['upload_status'])
+            from django.db import close_old_connections
+            import traceback
+            
+            # Ensure fresh DB connection in this thread
+            close_old_connections()
+            
+            try:
+                # Update chapter status
+                chapter.upload_status = 'completed'
+                chapter.save()
+                logger.info(f"Chapter upload job {job_id} completed")
+            except Exception as e:
+                logger.error(f"Failed to update chapter status: {str(e)}")
             logger.info(f"Chapter upload job {job_id} completed")
-        
+            
+            try:
+                # Notify Uploader
+                if user_id:
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    uploader = User.objects.get(id=user_id)
+                    Notification.objects.create(
+                        user=uploader,
+                        title="اكتمل الرفع",
+                        message=f"تم الانتهاء من رفع {chapter_title} بنجاح",
+                        link=f"/dashboard/manga/{manga_id}",
+                        notification_type='upload'
+                    )
+                
+                # Notify bookmarked users
+                bookmarks = UserBookmark.objects.filter(manga_id=manga_id)
+                for bookmark in bookmarks:
+                    if bookmark.user.id != user_id:
+                        Notification.objects.create(
+                            user=bookmark.user,
+                            title="فصل جديد متاح!",
+                            message=f"يتوفر الآن فصل جديد {chapter_title} من المانجا المفضلة لديك",
+                            link=f"/manga/{manga_id}",
+                            notification_type='chapter'
+                        )
+            except Exception as e:
+                logger.error(f"Notification creation failed: {str(e)}\n{traceback.format_exc()}")
+            finally:
+                # Release DB connection for this thread to avoid leaks
+                close_old_connections()
+                
         # Error callback
         def on_error(error):
             job_data = cache.get(f'upload_job_{job_id}')

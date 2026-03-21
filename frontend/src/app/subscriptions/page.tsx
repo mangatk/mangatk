@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaCheck, FaCrown, FaStar, FaInfinity } from 'react-icons/fa';
+import { FaCheckCircle, FaTimesCircle, FaStar, FaCrown, FaRocket, FaShieldAlt, FaComments, FaPaintBrush, FaCheck, FaGem, FaAd, FaInfinity } from 'react-icons/fa';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -38,7 +40,9 @@ export default function SubscriptionsPage() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentSubscription, setCurrentSubscription] = useState<string | null>(null);
+    const [purchasingId, setPurchasingId] = useState<string | null>(null);
     const { user, isAuthenticated, login } = useAuth();
+    const router = useRouter();
 
     useEffect(() => {
         fetchPlans();
@@ -161,6 +165,8 @@ export default function SubscriptionsPage() {
                                 return;
                             }
 
+                            setPurchasingId(plan.id);
+
                             // For free or discounted-to-free plans
                             if (isFree || isDiscountedToFree) {
                                 try {
@@ -175,22 +181,24 @@ export default function SubscriptionsPage() {
 
                                     const data = await res.json();
 
-                                    if (res.ok && data.success) {
-                                        alert(data.message);
-                                        // Reload page to update user data
-                                        window.location.reload();
+                                    if (res.ok) {
+                                        toast.success(data.message || 'تم الاشتراك بنجاح!');
+                                        router.refresh();
                                     } else {
-                                        alert(data.error || 'حدث خطأ، حاول مرة أخرى');
+                                        toast.error(data.error || 'حدث خطأ، حاول مرة أخرى');
                                     }
                                 } catch (error) {
                                     console.error('Subscription error:', error);
-                                    alert('حدث خطأ في الاتصال، حاول مرة أخرى');
+                                    toast.error('حدث خطأ في الاتصال، حاول مرة أخرى');
+                                } finally {
+                                    setPurchasingId(null);
                                 }
                                 return;
                             }
 
                             // For paid plans - show payment message
-                            alert('سيتم إضافة نظام الدفع قريباً');
+                            toast.error('سيتم إضافة نظام الدفع قريباً');
+                            setPurchasingId(null);
                         }
 
                         return (

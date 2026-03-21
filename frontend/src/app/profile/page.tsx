@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
+import toast from 'react-hot-toast';
 
 // واجهة لبيانات الردود
 interface ReplyNotification {
@@ -210,7 +211,7 @@ export default function ProfilePage() {
             setReplyNotifications(prev => prev.filter(n => n.replyId !== notif.replyId));
             setActiveReplyId(null);
             setReplyText('');
-            alert('تم إرسال ردك بنجاح! ✅');
+            toast.success('تم إرسال ردك بنجاح! ✅');
             return;
          }
       } catch (err) {
@@ -242,7 +243,7 @@ export default function ProfilePage() {
       setReplyNotifications(prev => prev.filter(n => n.replyId !== notif.replyId));
       setActiveReplyId(null);
       setReplyText('');
-      alert('تم إرسال ردك بنجاح! ✅');
+      toast.success('تم إرسال ردك بنجاح! ✅');
    };
 
    if (authLoading || !user) return <div className="min-h-screen flex items-center justify-center bg-gray-900"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div></div>;
@@ -418,7 +419,7 @@ export default function ProfilePage() {
                                              console.error('Error syncing equipped title:', err);
                                           }
 
-                                          alert(`تم تجهيز اللقب: "${achTitle}" بنجاح!`);
+                                          toast.success(`تم تجهيز اللقب: "${achTitle}" بنجاح!`);
                                        }
                                     }}
                                     className={`relative p-4 rounded-xl border flex flex-col items-center text-center transition-all duration-300 group ${isUnlocked

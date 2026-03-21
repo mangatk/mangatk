@@ -2,16 +2,17 @@
 Django REST Framework Views for Manga API
 Provides API endpoints for manga, chapters, genres, and categories
 """
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q, Count, Avg, Prefetch, Max
 from django.db.models.functions import Coalesce
-from .models import Genre, Category, Manga, Chapter, ChapterImage, SubscriptionPlan
+from .models import Genre, Category, Manga, Chapter, ChapterImage, SubscriptionPlan, Notification
 from .serializers import (
     GenreSerializer, CategorySerializer, SubscriptionPlanSerializer,
     MangaListSerializer, MangaDetailSerializer, MangaCreateSerializer,
-    ChapterSerializer, ChapterDetailSerializer, ChapterCreateSerializer
+    ChapterSerializer, ChapterDetailSerializer, ChapterCreateSerializer,
+    NotificationSerializer
 )
 
 
@@ -81,7 +82,7 @@ class MangaViewSet(viewsets.ModelViewSet):
         latest_chapter_date=Coalesce(Max('chapters__created_at'), 'updated_at')
     )
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'sub_titles', 'author', 'description', 'genres__name']
+    search_fields = ['title', 'sub_titles', 'author', 'artist', 'description', 'genres__name']
     # Removed computed fields (avg_rating, last_updated) from DB ordering, except annotated_avg_rating
     ordering_fields = ['title', 'views', 'updated_at', 'created_at', 'annotated_avg_rating', 'latest_chapter_date']
     ordering = ['-updated_at']
@@ -124,6 +125,16 @@ class MangaViewSet(viewsets.ModelViewSet):
         type_param = self.request.query_params.get('type', None)
         if type_param:
             queryset = queryset.filter(story_type=type_param)
+            
+        # Filter by Author EXACT
+        author = self.request.query_params.get('author', None)
+        if author:
+            queryset = queryset.filter(author__iexact=author)
+
+        # Filter by Artist EXACT
+        artist = self.request.query_params.get('artist', None)
+        if artist:
+            queryset = queryset.filter(artist__iexact=artist)
         
         # Filter by min_rating removed as it requires aggregation
         
@@ -218,8 +229,42 @@ class ChapterViewSet(viewsets.ModelViewSet):
                 annotated_image_count=Count('images', distinct=True),
                 annotated_avg_rating=Avg('ratings__rating')
             )
-        
         return queryset
+
+    def perform_create(self, serializer):
+        chapter = serializer.save()
+        from .models import Notification, UserBookmark
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Fixed the attribute error: Chapter model uses 'number', not 'chapter_number'
+            chapter_title = f"{chapter.manga.title} - Chapter {chapter.number}"
+            
+            # Notify Uploader (the currently logged-in admin user)
+            if self.request.user and self.request.user.is_authenticated:
+                Notification.objects.create(
+                    user=self.request.user,
+                    title="اكتمل الرفع",
+                    message=f"تم الانتهاء من رفع {chapter_title} بنجاح",
+                    link=f"/dashboard/manga/{chapter.manga.id}",
+                    notification_type='upload'
+                )
+            
+            # Notify bookmarked users
+            bookmarks = UserBookmark.objects.filter(manga_id=chapter.manga.id)
+            for bookmark in bookmarks:
+                if self.request.user and bookmark.user.id == self.request.user.id:
+                    continue
+                Notification.objects.create(
+                    user=bookmark.user,
+                    title="فصل جديد متاح!",
+                    message=f"يتوفر الآن فصل جديد {chapter_title} من المانجا المفضلة لديك",
+                    link=f"/manga/{chapter.manga.id}",
+                    notification_type='chapter'
+                )
+        except Exception as e:
+            logger.error(f"Failed to create chapter notification in ChapterViewSet: {e}")
     
     @action(detail=True, methods=['post'])
     def increment_views(self, request, pk=None):
@@ -264,7 +309,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
         import io
         from datetime import datetime
         from .services.imgbb import ImgBBService
-        
+        from .models import UserBookmark
         manga_id = request.data.get('manga')
         number = request.data.get('number')
         title = request.data.get('title', '')
@@ -356,6 +401,7 @@ class ChapterViewSet(viewsets.ModelViewSet):
         if failed_uploads > 0:
             message += f' (فشل رفع {failed_uploads} صورة)'
         
+        
         return Response({
             'success': True,
             'chapter_id': str(chapter.id),
@@ -365,7 +411,6 @@ class ChapterViewSet(viewsets.ModelViewSet):
         })
 
 
-# ==================== USER INTERACTION VIEWSETS ====================
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from .models import UserBookmark, Rating, Comment, CommentLike, Achievement, UserAchievement, ReadingHistory
 from .serializers import (
@@ -513,7 +558,7 @@ class BookmarkViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-    
+
     @action(detail=False, methods=['post'])
     def toggle(self, request):
         """Toggle bookmark status for a manga"""
@@ -840,6 +885,7 @@ class AchievementViewSet(viewsets.ModelViewSet):
                     # Award points
                     user.points += achievement.reward_points
                     user.save()
+                    user.save()
         
         return Response({
             'newly_unlocked': newly_unlocked,
@@ -899,24 +945,7 @@ def register_fcm_token(request):
     return Response({"ok": True})
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 
-from .notifications.onesignal import send_onesignal_to_segment
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def onesignal_test(request):
-    title = request.data.get("title", "اختبار")
-    body = request.data.get("body", "هذا إشعار اختبار من Django ✅")
-
-    try:
-        result = send_onesignal_to_segment(title=title, body=body)
-        return Response({"ok": True, "result": result})
-    except Exception as e:
-        return Response({"ok": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 import requests
 from django.http import HttpResponse
@@ -946,4 +975,38 @@ def proxy_image(request):
     except Exception as e:
         return Response({"ok": False, "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+        
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        self.get_queryset().filter(is_read=False).update(is_read=True)
+        return Response({'status': 'ok'})
+
+    @action(detail=False, methods=['post'])
+    def report_api_fallback(self, request):
+        """Called by frontend when ImgBB API falls back due to quota limits"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=403)
+            
+        key_index = request.data.get('key_index', 0)
+        
+        # Only notify once to avoid spam (frontend ensures this, but we double check)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admins = User.objects.filter(is_staff=True)
+        
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                title="تنبيه: نفاذ باقة تخزين ImgBB",
+                message=f"تم استهلاك أول مفتاحين لـ ImgBB. نظام الرفع الآن يستخدم المفتاح رقم {key_index + 1}. يرجى إضافة مفاتيح جديدة لتجنب التوقف.",
+                link="/dashboard",
+                notification_type='system'
+            )
+            
+        return Response({'status': 'ok'})

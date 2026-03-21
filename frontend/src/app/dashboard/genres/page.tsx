@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaTags } from 'react-icons/fa';
+import { useEffect, useState } from 'react';
+import { FaEdit, FaTrash, FaPlus, FaTags, FaSearch } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import { DashboardListSkeleton } from '@/components/DashboardSkeleton';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -35,7 +37,8 @@ export default function GenresPage() {
     }
 
     async function deleteGenre(slug: string) {
-        if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذا التصنيف؟');
+        if (!confirmed) return;
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -53,7 +56,7 @@ export default function GenresPage() {
             }
         } catch (error: any) {
             console.error('Error deleting genre:', error);
-            alert(error.message || 'حدث خطأ أثناء الحذف');
+            toast.error(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
@@ -165,7 +168,7 @@ function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClos
             onSuccess();
         } catch (error: any) {
             console.error('Error saving genre:', error);
-            alert(error.message || 'حدث خطأ أثناء الحفظ');
+            toast.error(error.message || 'حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }

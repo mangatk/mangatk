@@ -46,64 +46,15 @@ class CustomTranslator:
             ['/tmp/translated/page_001.png', '/tmp/translated/page_002.png', ...]
         """
         
-        # ============================================================
-        # TODO: المستخدم - قم بتنفيذ نموذج الترجمة الخاص بك هنا
-        # ============================================================
+        logger.info("استخدام المترجم الوهمي (Mock Translator) بناءً على طلب المستخدم لحين ربط الموديل الخاص")
         
-        # حالياً: استخدام المترجم الوهمي للاختبار
-        logger.info("استخدام المترجم الوهمي (Mock Translator) للاختبار")
+        import time
+        from .mock_translator import MockTranslator
         
-        try:
-            from .mock_translator import MockTranslator
-            return MockTranslator.translate_chapter(input_zip_path, output_dir)
-        except ImportError:
-            logger.warning("Mock Translator غير موجود، سأستخدم الطريقة القديمة")
+        # محاكاة بسيطة للوقت لكي يعمل شريط التقدم بوضوح
+        time.sleep(2)
         
-        # الطريقة القديمة (في حالة عدم وجود mock_translator)
-        logger.warning("CustomTranslator.translate_chapter() لم يتم تنفيذه بعد!")
-        logger.warning("يرجى تنفيذ نموذج الترجمة الخاص بك في هذا الملف")
-        
-        # قالب مؤقت للاختبار - يجب استبداله
-        import zipfile
-        import shutil
-        from pathlib import Path
-        
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        translated_images = []
-        
-        try:
-            with zipfile.ZipFile(input_zip_path, 'r') as zip_ref:
-                # استخراج الصور
-                image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
-                image_files = sorted([
-                    f for f in zip_ref.namelist()
-                    if f.lower().endswith(image_extensions) and not f.startswith('__MACOSX')
-                ])
-                
-                for idx, filename in enumerate(image_files, 1):
-                    # استخراج الصورة
-                    source = zip_ref.extract(filename, output_path)
-                    
-                    # ==========================================
-                    # TODO: هنا قم بترجمة الصورة
-                    # ==========================================
-                    # translated_image = your_translation_model(source)
-                    # translated_path = output_path / f'translated_{idx:03d}.png'
-                    # save_image(translated_image, translated_path)
-                    
-                    # حالياً: نسخ الصورة كما هي (للاختبار فقط)
-                    translated_path = output_path / f'page_{idx:03d}{Path(filename).suffix}'
-                    shutil.copy2(source, translated_path)
-                    
-                    translated_images.append(str(translated_path))
-                    
-        except Exception as e:
-            logger.error(f"خطأ في ترجمة الفصل: {e}")
-            raise
-        
-        return translated_images
+        return MockTranslator.translate_chapter(input_zip_path, output_dir)
 
     @classmethod
     def translate_chapter_async(
@@ -163,20 +114,11 @@ class CustomTranslator:
 
     @classmethod
     def test_model(cls) -> Dict:
-        """
-        اختبار النموذج للتأكد من أنه يعمل
-        
-        Returns:
-            dict مع معلومات حول النموذج وحالته
-        """
-        
-        # TODO: قم بإضافة اختبارات لنموذجك
-        
         return {
-            'status': 'not_implemented',
-            'message': 'يرجى تنفيذ نموذج الترجمة في custom_translator.py',
-            'model_name': 'Custom Translation Model',
-            'ready': False,
+            'status': 'mock',
+            'message': 'Simulation Ready: The system is running the Mock Translator while awaiting the custom translation model.',
+            'model_name': 'Mock Translation Model',
+            'ready': True,
             'async_supported': True
         }
 

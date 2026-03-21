@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaTrophy } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaTrophy, FaSearch, FaImage } from 'react-icons/fa';
 import { DashboardListSkeleton } from '@/components/DashboardSkeleton';
+import { ProxyImage } from '@/components/ProxyImage';
+import toast from 'react-hot-toast';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -55,7 +58,8 @@ export default function AchievementsPage() {
     }
 
     async function deleteAchievement(id: string) {
-        if (!confirm('هل أنت متأكد من حذف هذا الإنجاز؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذا الإنجاز؟');
+        if (!confirmed) return;
 
         try {
             const token = localStorage.getItem('manga_token');
@@ -73,7 +77,7 @@ export default function AchievementsPage() {
             setAchievements(achievements.filter(a => a.id !== id));
         } catch (error: any) {
             console.error('Error deleting achievement:', error);
-            alert(error.message || 'حدث خطأ أثناء الحذف');
+            toast.error(error.message || 'حدث خطأ أثناء الحذف');
         }
     }
 
@@ -241,7 +245,7 @@ function AchievementModal({ item, onClose, onSuccess }: { item: Achievement | nu
             onSuccess();
         } catch (error: any) {
             console.error('Error saving achievement:', error);
-            alert(error.message || 'حدث خطأ أثناء الحفظ');
+            toast.error(error.message || 'حدث خطأ أثناء الحفظ');
         } finally {
             setLoading(false);
         }

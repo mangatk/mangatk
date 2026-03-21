@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Carousel } from '@/components/Carousel';
 import { QuickMenu } from '@/components/QuickMenu';
@@ -23,6 +24,8 @@ interface Filters {
   status?: string;
   categories?: string[];
   sortBy?: string;
+  author?: string;
+  artist?: string;
 }
 
 // Category titles (keeping for UI)
@@ -49,9 +52,10 @@ const categoryInfo = {
   }
 };
 
-export default function Home() {
+function HomeContent() {
   const { user } = useAuth();
   const { history } = useStorage();
+  const searchParams = useSearchParams();
 
   const [allManga, setAllManga] = useState<Manga[]>([]);
   const [featuredManga, setFeaturedManga] = useState<Manga[]>([]);
@@ -59,7 +63,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [greeting, setGreeting] = useState('');
-  const [currentFilters, setCurrentFilters] = useState<Filters>({});
+  
+  // Initialize filters based on explicit URL parameters (like clicks from Manga Details page)
+  const initialAuthor = searchParams.get('author') || undefined;
+  const initialArtist = searchParams.get('artist') || undefined;
+  const [currentFilters, setCurrentFilters] = useState<Filters>({
+    author: initialAuthor,
+    artist: initialArtist,
+  });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,8 +94,8 @@ export default function Home() {
       try {
         setLoading(true);
 
-        // 1. Fetch first page of manga (20 items)
-        const response = await getMangaList(1, 20);
+        // 1. Fetch first page of manga (20 items) respecting explicit initial URL filters
+        const response = await getMangaList(1, 20, currentFilters);
         setAllManga(response.results);
         setFilteredManga(response.results);
         setTotalCount(response.count);
@@ -403,6 +414,22 @@ export default function Home() {
         {/* Footer Footer */}
         <Footer />
       </div>
+      <Footer />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل المانجا...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

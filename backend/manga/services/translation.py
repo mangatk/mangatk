@@ -74,6 +74,28 @@ class TranslationService:
         job_dir = TranslationService.UPLOAD_DIR / str(job_id)
         if job_dir.exists():
             shutil.rmtree(job_dir)
+            
+    @staticmethod
+    def create_result_archive(job_id, image_paths):
+        """
+        إنشاء ملف ZIP نهائي يحتوي على الصور المترجمة
+        Args:
+            job_id: UUID of the translation job
+            image_paths: List of absolute paths to the translated images
+        Returns:
+            str: Path to the created ZIP file
+        """
+        job_dir = TranslationService.UPLOAD_DIR / str(job_id)
+        result_dir = job_dir / 'result'
+        result_dir.mkdir(parents=True, exist_ok=True)
+        
+        archive_path = result_dir / f'translated_manga_{job_id}.cbz'
+        
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for img_path in image_paths:
+                zipf.write(img_path, arcname=os.path.basename(img_path))
+                
+        return str(archive_path)
     
     @staticmethod
     def validate_archive(file):

@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.http import FileResponse
 
-from .models import TranslationJob
+from .models import TranslationJob, Notification
 from .serializers import TranslationJobSerializer
 from .services.translation import TranslationService
 from .services.custom_translator import CustomTranslator
@@ -144,6 +144,16 @@ def upload_for_translation(request):
                 current_balance = request.user.points
                 points_deducted = True
                 logger.info(f"✅ Deducted {TRANSLATION_COST} points from user {request.user.username}. New balance: {current_balance}")
+                
+                try:
+                    Notification.objects.create(
+                        user=request.user,
+                        title="خصم نقاط",
+                        message=f"تم خصم {TRANSLATION_COST} نقطة لطلب ترجمة فصل. رصيدك الحالي: {current_balance}",
+                        notification_type='points'
+                    )
+                except Exception as ne:
+                    logger.error(f"Failed to create points notification: {ne}")
             else:
                 logger.warning(f"Points system not configured for user {request.user.username}. Allowing translation without deduction.")
                 points_deducted = False
@@ -193,6 +203,17 @@ def upload_for_translation(request):
                 
                 logger.info(f"Job {job.id} completed successfully")
                 
+                try:
+                    Notification.objects.create(
+                        user=job.user,
+                        title="اكتملت الترجمة",
+                        message=f"تم الانتهاء من ترجمة الفصل بنجاح. يمكنك الآن الاطلاع عليه أو تحميله.",
+                        link=f"/translate",
+                        notification_type='translation'
+                    )
+                except Exception as ne:
+                    logger.error(f"Failed to create translation notification: {ne}")
+                
             except Exception as e:
                 logger.error(f"Error in completion callback for job {job.id}: {e}")
                 job.status = 'failed'
@@ -207,6 +228,16 @@ def upload_for_translation(request):
                             user.points += TRANSLATION_COST
                             user.save()
                             logger.info(f"♻️ Refunded {TRANSLATION_COST} points to user {user.username}")
+                            
+                            try:
+                                Notification.objects.create(
+                                    user=user,
+                                    title="استرجاع نقاط",
+                                    message=f"تم استرجاع {TRANSLATION_COST} نقطة بسبب فشل الترجمة. رصيدك الحالي: {user.points}",
+                                    notification_type='points'
+                                )
+                            except Exception as ne:
+                                logger.error(f"Failed to create refund notification: {ne}")
                     except Exception as refund_error:
                         logger.error(f"Failed to refund points: {refund_error}")
         
@@ -225,6 +256,16 @@ def upload_for_translation(request):
                         user.points += TRANSLATION_COST
                         user.save()
                         logger.info(f"♻️ Refunded {TRANSLATION_COST} points to user {user.username}")
+                        
+                        try:
+                            Notification.objects.create(
+                                user=user,
+                                title="استرجاع نقاط",
+                                message=f"تم استرجاع {TRANSLATION_COST} نقطة بسبب فشل الترجمة. رصيدك الحالي: {user.points}",
+                                notification_type='points'
+                            )
+                        except Exception as ne:
+                            logger.error(f"Failed to create refund notification: {ne}")
                 except Exception as refund_error:
                     logger.error(f"Failed to refund points: {refund_error}")
         

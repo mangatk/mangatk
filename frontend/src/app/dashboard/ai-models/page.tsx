@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaRobot, FaSave, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -129,7 +130,8 @@ export default function AIModelsPage() {
     };
 
     const handleDelete = async (modelId: string) => {
-        if (!confirm('هل أنت متأكد من حذف هذا النموذج؟')) return;
+        const confirmed = await confirmAction('هل أنت متأكد من حذف هذا النموذج؟');
+        if (!confirmed) return;
 
         try {
             const token = localStorage.getItem('manga_token');

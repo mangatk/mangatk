@@ -69,6 +69,18 @@ class ImgBBService:
             
             if result.get('success'):
                 data = result['data']
+                
+                # Track backend ImgBB upload usage
+                try:
+                    from django.utils import timezone
+                    from ..models import ImgBBUploadStats
+                    today = timezone.localtime().date()
+                    stats, _ = ImgBBUploadStats.objects.get_or_create(date=today)
+                    stats.count += 1
+                    stats.save()
+                except Exception as e:
+                    print(f"Failed to track ImgBB upload: {e}")
+                    
                 return {
                     'url': data['url'],
                     'display_url': data['display_url'],
