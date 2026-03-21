@@ -23,13 +23,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='notification',
-            name='id',
-            field=models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'),
-        ),
-        migrations.AlterField(
-            model_name='notification',
             name='notification_type',
-            field=models.CharField(choices=[('points', 'Points / Economy'), ('translation', 'Translation Complete'), ('upload', 'Upload Complete'), ('chapter', 'New Chapter Released')], default='points', max_length=20),
+            field=models.CharField(choices=[('points', 'Points / Economy'), ('translation', 'Translation Complete'), ('upload', 'Upload Complete'), ('chapter', 'New Chapter Released'), ('system', 'System')], default='points', max_length=20),
         ),
         migrations.AlterField(
             model_name='notification',
@@ -42,3 +37,4 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(help_text='The user receiving this notification', on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL),
         ),
     ]
+
