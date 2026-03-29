@@ -754,6 +754,7 @@ class Notification(models.Model):
         ('chapter', 'New Chapter Released')
     )
     
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', help_text="The user receiving this notification")
     title = models.CharField(max_length=255)
     message = models.TextField()
