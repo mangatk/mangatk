@@ -59,6 +59,9 @@ function mapMangaData(item: any): Manga {
     status: item.status,
     lastUpdated: item.last_updated,
     author: item.author || 'Unknown',
+    artist: item.artist || '',
+    sub_titles: item.sub_titles || '',
+    publish_date: item.publish_date || '',
     story_type: item.story_type || 'manhwa',
     views: item.views || 0,
     // التعامل مع الفئة (Category) سواء كانت كائن كامل أو مجرد Slug

@@ -12,6 +12,8 @@ export interface Manga {
   lastUpdated: string;
   artist?: string;
   author: string;
+  sub_titles?: string;
+  publish_date?: string;
   story_type: string;
   views: number;
   category: string;

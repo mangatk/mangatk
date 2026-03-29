@@ -19,11 +19,16 @@ interface MangaDetail {
     title: string;
     sub_titles?: string;
     author: string;
+    artist?: string;
+    publish_date?: string;
     description: string;
     status: string;
+    story_type?: string;
     cover_image_url: string;
     views: number;
     chapters: Chapter[];
+    genres?: { id: string, name: string, slug: string }[];
+    category?: { id: string, name: string, slug: string } | null;
 }
 
 interface Chapter {
@@ -138,21 +143,40 @@ export default function MangaDetailPage() {
                                 </button>
                             </div>
                         </div>
-                        <p className="text-gray-400 mb-2">بواسطة: {manga.author || 'غير معروف'}</p>
+                        <div className="flex flex-wrap gap-4 text-gray-400 mb-2 font-medium">
+                            <p className="bg-gray-700/50 px-3 py-1 rounded">👤 المؤلف: {manga.author || 'غير معروف'}</p>
+                            {manga.artist && <p className="bg-gray-700/50 px-3 py-1 rounded">🖌️ الرسام: {manga.artist}</p>}
+                            {manga.publish_date && <p className="bg-gray-700/50 px-3 py-1 rounded">📅 تاريخ النشر: {manga.publish_date}</p>}
+                            {manga.category && <p className="bg-yellow-600/20 text-yellow-400 px-3 py-1 rounded font-bold">📚 الفئة: {manga.category.name}</p>}
+                            {manga.story_type && <p className="bg-gray-700/50 px-3 py-1 rounded">نوع السرد: {manga.story_type}</p>}
+                        </div>
+
                         {manga.sub_titles && (
-                            <p className="text-gray-500 text-sm mb-4 italic">
-                                الأسماء الأخرى: {manga.sub_titles}
-                            </p>
+                            <div className="mb-4">
+                                <span className="text-gray-400 text-sm font-bold">الأسماء الأخرى: </span>
+                                <span className="text-gray-300 text-sm italic">{manga.sub_titles}</span>
+                            </div>
                         )}
-                        <p className="text-gray-300 mb-4 line-clamp-3">{manga.description || 'لا يوجد وصف'}</p>
+                        
+                        {manga.genres && manga.genres.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {manga.genres.map(g => (
+                                    <span key={g.id} className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded text-xs font-bold">
+                                        {g.name}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        <p className="text-gray-300 mb-6 line-clamp-3 bg-gray-900/50 p-4 rounded-lg">{manga.description || 'لا يوجد وصف'}</p>
 
                         <div className="flex items-center gap-4">
-                            <span className={`px-3 py-1 rounded-full text-sm ${manga.status === 'ongoing' ? 'bg-green-600/20 text-green-400' : 'bg-blue-600/20 text-blue-400'
+                            <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-sm ${manga.status === 'ongoing' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
                                 }`}>
                                 {manga.status === 'ongoing' ? 'مستمر' : 'مكتمل'}
                             </span>
-                            <span className="text-gray-400">
-                                {manga.views?.toLocaleString() || 0} مشاهدة
+                            <span className="text-gray-300 font-medium">
+                                👁️ المشاهدات: {manga.views?.toLocaleString() || 0}
                             </span>
                         </div>
                     </div>

@@ -241,9 +241,14 @@ export default function MangaDetail() {
 
           {/* Manga Details */}
           <div className="flex-1 pt-4 md:pt-24 text-center md:text-right">
-            <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4 leading-tight drop-shadow-sm">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-2 leading-tight drop-shadow-sm">
               {manga.title}
             </h1>
+            {manga.sub_titles && (
+              <h2 className="text-lg md:text-xl text-gray-500 dark:text-gray-400 mb-4 italic">
+                {manga.sub_titles}
+              </h2>
+            )}
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6 text-sm font-medium">
               <Link href={`/browse?author=${encodeURIComponent(manga.author)}`} className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-blue-600 hover:text-blue-500 cursor-pointer">
@@ -256,14 +261,30 @@ export default function MangaDetail() {
                   <span className="font-bold">{manga.artist}</span>
                 </Link>
               )}
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+              {manga.category && (
+                  <Link href={`/browse?category=${encodeURIComponent(manga.category)}`} className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-indigo-500 hover:text-indigo-400 cursor-pointer">
+                    <FaLayerGroup />
+                    <span className="font-bold">{manga.category}</span>
+                  </Link>
+              )}
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm" title="التقييم">
                 <FaStar className="text-yellow-400 text-lg" />
-                <span className="text- gray-900 dark:text-white font-bold">{manga.avgRating}</span>
+                <span className="text-gray-900 dark:text-white font-bold">{manga.avgRating}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm" title="عدد الفصول">
                 <FaLayerGroup className="text-purple-500" />
                 <span className="text-gray-700 dark:text-gray-300">{manga.chapterCount} فصل</span>
               </div>
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm" title="المشاهدات (المتابعين)">
+                <FaUser className="text-green-500" />
+                <span className="text-gray-700 dark:text-gray-300">{manga.views}</span>
+              </div>
+              {manga.publish_date && (
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm" title="تاريخ الإصدار">
+                  <FaClock className="text-orange-500" />
+                  <span className="text-gray-700 dark:text-gray-300">{manga.publish_date}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">

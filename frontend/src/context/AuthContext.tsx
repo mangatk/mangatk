@@ -94,8 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           console.error('Failed to sync user profile from backend');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching Auth0 token or syncing profile:', error);
+        // If Auth0 requires explicit consent for the API audience, silent token fetch fails.
+        // We must trigger an interactive login so the user can click "Accept".
+        if (error?.error === 'consent_required' || error?.message === 'Consent required') {
+            console.warn('Auth0 API Consent Required. Redirecting to consent screen...');
+            if (isMounted) {
+                loginWithRedirect();
+            }
+        }
       } finally {
         if (isMounted) setIsSyncing(false);
       }

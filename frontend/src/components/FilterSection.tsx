@@ -155,27 +155,27 @@ interface FilterData {
 interface FilterSectionProps {
   onFilter: (filters: FilterData) => void;
   onSort: (sortType: string) => void;
-  initialCategories?: string[];
+  initialGenres?: string[];
 }
 
-export function FilterSection({ onFilter, onSort, initialCategories = [] }: FilterSectionProps) {
+export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSectionProps) {
   const [status, setStatus] = useState<string>('All');
   const [type, setType] = useState<string>('All');
   const [order, setOrder] = useState<string>('Name');
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(initialCategories);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(initialGenres);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
-  const [lastInitialCategories, setLastInitialCategories] = useState<string[]>(initialCategories);
+  const [lastInitialGenres, setLastInitialGenres] = useState<string[]>(initialGenres);
 
   useEffect(() => {
-    const incoming = JSON.stringify(initialCategories);
+    const incoming = JSON.stringify(initialGenres);
     const current = JSON.stringify(selectedGenres);
     if (incoming !== current) {
-      setSelectedGenres(initialCategories);
-      setLastInitialCategories(initialCategories);
+      setSelectedGenres(initialGenres);
+      setLastInitialGenres(initialGenres);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(initialCategories)]);
+  }, [JSON.stringify(initialGenres)]);
 
   // حالة لتخزين الأنواع القادمة من السيرفر
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
