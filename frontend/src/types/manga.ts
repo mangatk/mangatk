@@ -29,11 +29,11 @@ export interface Chapter {
 export interface FilterState {
   query?: string;
   status?: string;
-  categories?: string[];
+  categories?: string[];  // category slugs (e.g. 'best-webtoon') - from CategoryNav
+  genres?: string[];      // genre names (e.g. 'Action') - from FilterSection dropdown
   type?: string;
   author?: string;
   artist?: string;
-  // التعديل هنا: جعلناها string لتقبل القيم القادمة من القوائم المنسدلة مثل "Latest Chapter"
   sortBy?: string;
 }
 

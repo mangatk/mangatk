@@ -27,8 +27,6 @@ djangorestframework-simplejwt==5.3.1
 gunicorn==23.0.0
 idna==3.11
 kombu==5.5.4
-mysql-connector-python==9.4.0
-mysqlclient==2.2.7
 packaging==25.0
 pillow==11.3.0
 prompt_toolkit==3.0.52

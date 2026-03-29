@@ -23,6 +23,7 @@ interface Filters {
   query?: string;
   status?: string;
   categories?: string[];
+  genres?: string[];
   sortBy?: string;
   author?: string;
   artist?: string;
@@ -224,15 +225,15 @@ function HomeContent() {
     fetchFiltered();
   }, [currentFilters]);
 
-  const handleFilter = (filters: Filters) => setCurrentFilters(filters);
+  const handleFilter = (filters: Filters) => setCurrentFilters(prev => ({ ...prev, ...filters }));
   const handleSort = (order: string) => setCurrentFilters(prev => ({ ...prev, sortBy: order }));
-  const handleCategorySelect = (cat: string) => handleFilter({ categories: [cat] });
+  const handleCategorySelect = (cat: string) => setCurrentFilters(prev => ({ ...prev, categories: [cat] }));
 
   const clearFilters = () => {
     setCurrentFilters({});
   };
 
-  const hasActiveFilters = currentFilters.query || (currentFilters.status && currentFilters.status !== 'All') || (currentFilters.categories && currentFilters.categories.length > 0) || (currentFilters.sortBy && currentFilters.sortBy !== 'Name');
+  const hasActiveFilters = currentFilters.query || (currentFilters.status && currentFilters.status !== 'All') || (currentFilters.categories && currentFilters.categories.length > 0) || (currentFilters.genres && currentFilters.genres.length > 0) || (currentFilters.sortBy && currentFilters.sortBy !== 'Name');
   const lastRead = history.length > 0 ? history[0] : null;
 
   // Loading state
@@ -291,7 +292,7 @@ function HomeContent() {
         )}
 
         {/* Filter Section */}
-        <FilterSection onFilter={handleFilter} onSort={handleSort} />
+        <FilterSection onFilter={handleFilter} onSort={handleSort} initialCategories={currentFilters.genres || []} />
         <CategoryNav onCategorySelect={handleCategorySelect} />
 
         {/* Search Results or Main Content */}

@@ -108,9 +108,18 @@ export function MultiChapterUploadModal({
         if (files.length === 0) return;
 
         const folderGroups = new Map<string, File[]>();
+        const zipFiles: File[] = [];
         
         for (const file of files) {
             const pathParts = file.webkitRelativePath.split('/');
+            const fileName = file.name.toLowerCase();
+            
+            // Catch inner ZIP/CBZ files
+            if (fileName.endsWith('.zip') || fileName.endsWith('.cbz')) {
+                zipFiles.push(file);
+                continue;
+            }
+
             if (pathParts.length > 1) {
                 // Get the immediate parent folder of the image
                 const folderName = pathParts[pathParts.length - 2];
@@ -123,12 +132,14 @@ export function MultiChapterUploadModal({
             }
         }
 
-        if (folderGroups.size === 0) {
-            toast.error('لم يتم العثور على أي مجلدات تحتوي على صور');
+        if (folderGroups.size === 0 && zipFiles.length === 0) {
+            toast.error('لم يتم العثور على صور أو ملفات ZIP داخل المجلد');
             return;
         }
 
         const newChapterFiles: ChapterFile[] = [];
+        
+        // 1. Process regular image folders
         folderGroups.forEach((imageFiles, folderName) => {
             const parsed = parseChapterFileName(folderName);
             newChapterFiles.push({
@@ -144,10 +155,40 @@ export function MultiChapterUploadModal({
             });
         });
 
+        // 2. Process inner ZIP files
+        const newZipChapterFiles: ChapterFile[] = zipFiles.map(file => {
+            const parsed = parseChapterFileName(file.name);
+            return {
+                id: `${Date.now()}-${Math.random()}`,
+                file,
+                number: parsed.number,
+                title: parsed.title || `${mangaTitle} - الفصل ${parsed.number}`,
+                imageCount: 0,
+                isCountingImages: true,
+                isEditing: false,
+                uploadStatus: 'pending',
+                uploadProgress: 0,
+            };
+        });
+
+        const allNewFiles = [...newChapterFiles, ...newZipChapterFiles];
+
         setChapterFiles(prev => {
-            const combined = [...prev, ...newChapterFiles];
+            const combined = [...prev, ...allNewFiles];
             return combined.sort((a, b) => parseFloat(a.number || '0') - parseFloat(b.number || '0'));
         });
+        
+        // Count images for the newly found inner zip files
+        for (const chapterFile of newZipChapterFiles) {
+            if (chapterFile.file) {
+                const count = await countImagesInZip(chapterFile.file, getAuthHeaders());
+                setChapterFiles(prev => prev.map(cf =>
+                    cf.id === chapterFile.id
+                        ? { ...cf, imageCount: count, isCountingImages: false }
+                        : cf
+                ));
+            }
+        }
 
         // Clear input
         e.target.value = '';

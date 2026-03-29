@@ -179,6 +179,14 @@ REST_FRAMEWORK = {
         'manga.auth0_utils.Auth0JSONWebTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '200/minute'
+    },
     'UNICODE_JSON': True,
     'COMPACT_JSON': False,
 }
@@ -193,17 +201,31 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Cache Configuration - Required for async upload progress tracking
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 3600,  # 1 hour
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000
+# Cache Configuration
+# Uses Redis in production (shared across Gunicorn workers), LocMem in development
+REDIS_URL = os.getenv('REDIS_URL', None)
+
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'TIMEOUT': 3600,  # 1 hour default
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
         }
     }
-}
+else:
+    # Fallback for local development
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'TIMEOUT': 3600,
+            'OPTIONS': {'MAX_ENTRIES': 1000}
+        }
+    }
 
 # ImgBB API Configuration
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')

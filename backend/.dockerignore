@@ -1,0 +1,26 @@
+# Ignore Git
+.git
+.gitignore
+
+# Ignore Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore Virtual Environments
+venv/
+.venv/
+env/
+.env
+
+# Ignore Local Databases (We use Postgres in production)
+db.sqlite3
+
+# Ignore Heavy Temp/Upload Folders from the Laptop
+translation_temp/
+media/
+static/
+
+# Ignore IDE files
+.vscode/
+.idea/

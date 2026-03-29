@@ -102,9 +102,14 @@ export async function getMangaList(page: number = 1, pageSize: number = 20, filt
     params.append('artist', filters.artist);
   }
 
-  // دعم تصفية الأنواع (Genres)
+  // دعم تصفية الأنواع (Genres) - separate from categories
+  if (filters?.genres && filters.genres.length > 0) {
+    filters.genres.forEach((g: string) => params.append('genre', g));
+  }
+
+  // دعم تصفية الفئات (Categories)
   if (filters?.categories && filters.categories.length > 0) {
-    filters.categories.forEach(cat => params.append('genre', cat));
+    filters.categories.forEach(cat => params.append('category', cat));
   }
 
   if (filters?.sortBy) {

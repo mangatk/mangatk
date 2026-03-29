@@ -145,7 +145,8 @@ import { getGenres } from '@/services/api'; // استيراد دالة جلب ا
 
 interface FilterData {
   status?: string;
-  categories?: string[]; // في هذا السياق، الـ Categories هي الـ Genres
+  categories?: string[]; // category slugs from CategoryNav
+  genres?: string[];     // genre names from genre dropdown
   query?: string;
   type?: string;
   sortBy?: string;
@@ -167,11 +168,14 @@ export function FilterSection({ onFilter, onSort, initialCategories = [] }: Filt
   const [lastInitialCategories, setLastInitialCategories] = useState<string[]>(initialCategories);
 
   useEffect(() => {
-    if (JSON.stringify(lastInitialCategories) !== JSON.stringify(initialCategories)) {
+    const incoming = JSON.stringify(initialCategories);
+    const current = JSON.stringify(selectedGenres);
+    if (incoming !== current) {
       setSelectedGenres(initialCategories);
       setLastInitialCategories(initialCategories);
     }
-  }, [initialCategories, lastInitialCategories]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialCategories)]);
 
   // حالة لتخزين الأنواع القادمة من السيرفر
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
@@ -190,15 +194,15 @@ export function FilterSection({ onFilter, onSort, initialCategories = [] }: Filt
   }, []);
 
   const handleFilter = () => {
-    onFilter({ status, type, categories: selectedGenres, sortBy: order });
+    onFilter({ status, type, genres: selectedGenres, sortBy: order });
     setShowCategoryDropdown(false);
   };
 
   const handleCategoryToggle = (cat: string) => {
     const newGenres = selectedGenres.includes(cat) ? selectedGenres.filter(c => c !== cat) : [...selectedGenres, cat];
     setSelectedGenres(newGenres);
-    // Auto-apply genre filter
-    onFilter({ status, type, categories: newGenres, sortBy: order });
+    // Auto-apply genre filter, preserve other filters
+    onFilter({ status, type, genres: newGenres, sortBy: order });
   };
 
   const statuses = ['All', 'Completed', 'Ongoing'];
@@ -221,7 +225,7 @@ export function FilterSection({ onFilter, onSort, initialCategories = [] }: Filt
               value={type}
               onChange={(e) => {
                 setType(e.target.value);
-                onFilter({ status, type: e.target.value, categories: selectedGenres, sortBy: order });
+                onFilter({ status, type: e.target.value, genres: selectedGenres, sortBy: order });
               }}
               className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
@@ -233,7 +237,7 @@ export function FilterSection({ onFilter, onSort, initialCategories = [] }: Filt
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
-                onFilter({ status: e.target.value, type, categories: selectedGenres, sortBy: order });
+                onFilter({ status: e.target.value, type, genres: selectedGenres, sortBy: order });
               }}
               className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >

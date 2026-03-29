@@ -111,10 +111,11 @@ class MangaViewSet(viewsets.ModelViewSet):
         if category:
             queryset = queryset.filter(category__slug=category)
         
-        # Filter by genre
-        genre = self.request.query_params.get('genre', None)
-        if genre:
-            queryset = queryset.filter(genres__name__icontains=genre)
+        # Filter by genre (AND logic: manga must have ALL selected genres)
+        genres = self.request.query_params.getlist('genre')
+        if genres:
+            for genre_name in genres:
+                queryset = queryset.filter(genres__name__iexact=genre_name)
         
         # Filter by status
         status_param = self.request.query_params.get('status', None)
@@ -356,8 +357,16 @@ class ChapterViewSet(viewsets.ModelViewSet):
         images_created = 0
         failed_uploads = 0
         
+        # Security Constants
+        MAX_FILES_PER_ZIP = 500  # Prevent infinite file extraction
+        MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50MB per image maximum
+        
         try:
             with zipfile.ZipFile(uploaded_file, 'r') as zip_file:
+                # Security Check 1: Max Files
+                if len(zip_file.namelist()) > MAX_FILES_PER_ZIP:
+                    return Response({'error': f'معالجة مرفوضة: الملف المضغوط يحتوي على أكثر من {MAX_FILES_PER_ZIP} ملف.'}, status=400)
+
                 # Get list of image files, sorted
                 image_files = sorted([
                     f for f in zip_file.namelist()
@@ -365,6 +374,11 @@ class ChapterViewSet(viewsets.ModelViewSet):
                 ])
                 
                 for page_num, filename in enumerate(image_files, 1):
+                    # Security Check 2: Max File Size
+                    file_info = zip_file.getinfo(filename)
+                    if file_info.file_size > MAX_FILE_SIZE_BYTES:
+                         continue # Skip maliciously large dummy files
+                         
                     # Extract file data
                     file_data = zip_file.read(filename)
                     
