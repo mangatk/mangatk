@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { FaSun, FaMoon, FaSignOutAlt, FaBell } from 'react-icons/fa';
+import { FaSun, FaMoon, FaSignOutAlt, FaBell, FaBars, FaTimes } from 'react-icons/fa';
 import { SearchBar } from './SearchBar';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -15,6 +15,7 @@ export function Header() {
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
 
   const { newUnlock, closeNotification } = useAchievements();
@@ -52,7 +53,14 @@ export function Header() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-4">
 
           {/* الشعار والقوائم */}
-          <div className="flex items-center gap-6 md:gap-8">
+          <div className="flex items-center gap-4 md:gap-8">
+            <button 
+              className="md:hidden text-gray-600 dark:text-gray-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle Mobile Menu"
+            >
+              {mobileMenuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
+            </button>
             <Link href="/" className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               MangaTK
             </Link>
@@ -205,6 +213,29 @@ export function Header() {
             )}
           </div>
         </div>
+
+        {/* --- القائمة الجانبية للجوال (Mobile Overlay) --- */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-[100%] left-0 w-full min-h-[calc(100vh-70px)] bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 animate-in slide-in-from-top-2 duration-300 z-50">
+            {/* Search Bar on Mobile */}
+            <div className="w-full">
+              <SearchBar />
+            </div>
+            
+            <nav className="flex flex-col gap-3 flex-1">
+              {navItems.map((item, idx) => (
+                <Link
+                  key={idx}
+                  href={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-4 py-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors font-bold text-lg border border-gray-100 dark:border-gray-800/50"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </header>
     </>
   );

@@ -215,11 +215,13 @@ export default function ReaderPage() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-gray-200 font-sans selection:bg-blue-500 selection:text-white">
-      <Header />
+      <div className="hidden md:block">
+        <Header />
+      </div>
 
       {/* --- Reader Controls Header --- */}
       <header
-        className={`fixed top-16 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
+        className={`fixed top-0 md:top-16 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="flex items-center gap-3 md:gap-4">
           <Link href={`/manga/${chapter.mangaId}`} className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full">
