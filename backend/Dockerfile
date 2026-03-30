@@ -1,14 +1,12 @@
-# Use official Python runtime as a parent image
-FROM python:3.12-slim
+# ── Stage 1: Builder (installs deps with compiler) ──────────
+FROM python:3.12-slim AS builder
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies (needed for PostgreSQL)
+# Install build tools (only needed to compile packages like grpcio/cryptography)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         pkg-config \
@@ -16,17 +14,32 @@ RUN apt-get update \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt /app/
+# Install Python dependencies into a venv so we can copy just that
+COPY requirements.txt .
 RUN pip install --upgrade pip \
-    && pip install -r requirements.txt \
-    && pip install gunicorn
+    && pip install --no-cache-dir --prefix=/install -r requirements.txt \
+    && pip install --no-cache-dir --prefix=/install gunicorn
 
-# Copy project
+
+# ── Stage 2: Runtime (tiny final image, no compiler) ────────
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Only the runtime library needed (libpq for psycopg2)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy compiled packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy project code
 COPY . /app/
 
-# Expose port 8000
 EXPOSE 8000
 
-# Command to run the application using Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]

@@ -148,14 +148,16 @@ export function Header() {
                   onClick={() => setMenuOpen(!menuOpen)}
                   className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all relative z-50"
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold relative">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold relative overflow-hidden">
                     {user.equipped_achievement_icon ? (
-                      <div className="absolute inset-0 w-full h-full rounded-full overflow-hidden">
-                        <ProxyImage src={user.equipped_achievement_icon} alt="Achievement" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      user.name ? user.name[0].toUpperCase() : 'U'
-                    )}
+                      <img
+                        src={user.equipped_achievement_icon}
+                        alt="Achievement"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : null}
+                    <span className="relative z-0">{user.name ? user.name[0].toUpperCase() : 'U'}</span>
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block max-w-[100px] truncate">
                     {user.name}
@@ -214,15 +216,18 @@ export function Header() {
           </div>
         </div>
 
-        {/* --- القائمة الجانبية للجوال (Mobile Overlay) --- */}
+        {/* --- القائمة المنزلقة للجوال (Mobile Slide-Down) --- */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-[100%] left-0 w-full min-h-[calc(100vh-70px)] bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 animate-in slide-in-from-top-2 duration-300 z-50">
+          <div
+            className="md:hidden fixed inset-x-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 z-[49] animate-in slide-in-from-top-2 duration-300 overflow-y-auto"
+            style={{ top: '56px', maxHeight: 'calc(100vh - 56px)' }}
+          >
             {/* Search Bar on Mobile */}
             <div className="w-full">
               <SearchBar />
             </div>
-            
-            <nav className="flex flex-col gap-3 flex-1">
+
+            <nav className="flex flex-col gap-3">
               {navItems.map((item, idx) => (
                 <Link
                   key={idx}
@@ -234,6 +239,23 @@ export function Header() {
                 </Link>
               ))}
             </nav>
+
+            {/* Quick user actions on mobile */}
+            {user ? (
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex flex-col gap-2">
+                <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold text-base transition-colors">
+                  👤 الملف الشخصي
+                </Link>
+                <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full text-right px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-500 font-bold text-base transition-colors">
+                  تسجيل الخروج
+                </button>
+              </div>
+            ) : (
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex gap-3">
+                <button onClick={() => { login(); setMobileMenuOpen(false); }} className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold text-base">دخول</button>
+                <button onClick={() => { register(); setMobileMenuOpen(false); }} className="flex-1 py-3 rounded-2xl bg-blue-600 text-white font-bold text-base shadow-lg">تسجيل</button>
+              </div>
+            )}
           </div>
         )}
       </header>
