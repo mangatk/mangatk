@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface ProxyImageProps {
     src: string;
@@ -9,6 +9,7 @@ interface ProxyImageProps {
     fallbackSrc?: string;
     onError?: () => void;
     onClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
+    style?: React.CSSProperties;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -32,7 +33,8 @@ export function ProxyImage({
     className = '',
     fallbackSrc = '/placeholder.png',
     onError,
-    onClick
+    onClick,
+    style
 }: ProxyImageProps) {
     // Start by assuming the image can be loaded directly from its source url
     // If it fails (due to regional blocking), the handleImageError will pick it up
@@ -70,6 +72,7 @@ export function ProxyImage({
                 alt={alt}
                 className={className}
                 onClick={onClick}
+                style={style}
                 loading="lazy"
             />
         );
@@ -82,6 +85,7 @@ export function ProxyImage({
             className={className}
             onError={handleImageError}
             onClick={onClick}
+            style={style}
             loading="lazy"
         />
     );

@@ -58,6 +58,9 @@ export default function MangaListPage() {
     const [filterGenre, setFilterGenre] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
+    // View Options
+    const [gridSize, setGridSize] = useState<'large' | 'medium' | 'small'>('medium');
+
     useEffect(() => {
         fetchManga();
         fetchFilters();
@@ -164,6 +167,14 @@ export default function MangaListPage() {
 
     const activeFiltersCount = [filterStatus, filterCategory, filterGenre].filter(Boolean).length;
 
+    // Grid Size Classes
+    let gridColsClass = "grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4"; // Medium default
+    if (gridSize === 'large') {
+        gridColsClass = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6";
+    } else if (gridSize === 'small') {
+        gridColsClass = "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 text-xs";
+    }
+
     if (loading) {
         return (
             <div>
@@ -175,10 +186,11 @@ export default function MangaListPage() {
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                     >
                         <FaPlus /> إضافة مانجا
+                    <FaPlus /> إضافة مانجا
                     </Link>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <MangaCardSkeleton count={8} />
+                <div className={`grid ${gridColsClass}`}>
+                    <MangaCardSkeleton count={gridSize === 'small' ? 16 : 8} />
                 </div>
             </div>
         );
@@ -197,8 +209,8 @@ export default function MangaListPage() {
                 </Link>
             </div>
 
-            {/* Search & Filters */}
-            <div className="flex gap-4 mb-6">
+            {/* Search, Grid & Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                     <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -209,19 +221,32 @@ export default function MangaListPage() {
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pr-12 pl-4 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
                     />
                 </div>
-                <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${showFilters ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                        }`}
-                >
-                    <FaFilter />
-                    الفلاتر
-                    {activeFiltersCount > 0 && (
-                        <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {activeFiltersCount}
-                        </span>
-                    )}
-                </button>
+                
+                <div className="flex gap-2">
+                    <select
+                        value={gridSize}
+                        onChange={(e) => setGridSize(e.target.value as 'large' | 'medium' | 'small')}
+                        className="bg-gray-800 border border-gray-700 text-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:border-blue-500 hover:bg-gray-700 transition"
+                    >
+                        <option value="large">عرض بحجم كبير</option>
+                        <option value="medium">تخطيط 6 أعمدة (متوسط)</option>
+                        <option value="small">تخطيط 8 أعمدة (صغير)</option>
+                    </select>
+
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${showFilters ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            }`}
+                    >
+                        <FaFilter />
+                        الفلاتر
+                        {activeFiltersCount > 0 && (
+                            <span className="bg-white text-blue-600 font-bold text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {activeFiltersCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Filters Panel */}
@@ -284,7 +309,7 @@ export default function MangaListPage() {
             </p>
 
             {/* Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className={`grid ${gridColsClass}`}>
                 {filteredManga.map((m) => (
                     <div
                         key={m.id}
@@ -378,8 +403,8 @@ export default function MangaListPage() {
 
             {/* Loading More Skeleton */}
             {loadingMore && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
-                    <MangaCardSkeleton count={4} />
+                <div className={`grid ${gridColsClass} mt-6`}>
+                    <MangaCardSkeleton count={gridSize === 'small' ? 8 : 4} />
                 </div>
             )}
         </div>

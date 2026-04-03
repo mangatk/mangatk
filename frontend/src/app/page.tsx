@@ -332,55 +332,38 @@ function HomeContent() {
               </div>
             </section>
 
-            {/* Best Webtoon */}
-            {categorizedManga['best-webtoon'].length > 0 && (
-              <section className="py-12 bg-gray-50 dark:bg-gray-800">
-                <div className="container mx-auto px-4">
-                  <SectionTitle title={categoryInfo['best-webtoon'].title} description={categoryInfo['best-webtoon'].description} viewAllLink="/category/best-webtoon" />
-                  <ComicGrid mangaList={categorizedManga['best-webtoon']} onLoadMore={() => { }} hasMore={false} limit={4} showHeader={false} />
-                </div>
-              </section>
-            )}
-
-            {/* Golden Week */}
-            {categorizedManga['golden-week'].length > 0 && (
-              <section className="py-12 bg-white dark:bg-gray-900">
-                <div className="container mx-auto px-4">
-                  <SectionTitle title={categoryInfo['golden-week'].title} description={categoryInfo['golden-week'].description} viewAllLink="/category/golden-week" />
-                  <ComicGrid mangaList={categorizedManga['golden-week']} onLoadMore={() => { }} hasMore={false} limit={4} showHeader={false} />
-                </div>
-              </section>
-            )}
-
-            {/* New Releases */}
-            {categorizedManga['new-releases'].length > 0 && (
-              <section className="py-12 bg-gray-50 dark:bg-gray-800">
-                <div className="container mx-auto px-4">
-                  <SectionTitle title={categoryInfo['new-releases'].title} description={categoryInfo['new-releases'].description} viewAllLink="/category/new-releases" />
-                  <ComicGrid mangaList={categorizedManga['new-releases']} onLoadMore={() => { }} hasMore={false} limit={4} showHeader={false} />
-                </div>
-              </section>
-            )}
-
-            {/* Action & Fantasy */}
-            {categorizedManga['action-fantasy'].length > 0 && (
-              <section className="py-12 bg-white dark:bg-gray-900">
-                <div className="container mx-auto px-4">
-                  <SectionTitle title={categoryInfo['action-fantasy'].title} description={categoryInfo['action-fantasy'].description} viewAllLink="/category/action-fantasy" />
-                  <ComicGrid mangaList={categorizedManga['action-fantasy']} onLoadMore={() => { }} hasMore={false} limit={4} showHeader={false} />
-                </div>
-              </section>
-            )}
-
-            {/* Romance & Drama */}
-            {categorizedManga['romance-drama'].length > 0 && (
-              <section className="py-12 bg-gray-50 dark:bg-gray-800">
-                <div className="container mx-auto px-4">
-                  <SectionTitle title={categoryInfo['romance-drama'].title} description={categoryInfo['romance-drama'].description} viewAllLink="/category/romance-drama" />
-                  <ComicGrid mangaList={categorizedManga['romance-drama']} onLoadMore={() => { }} hasMore={false} limit={4} showHeader={false} />
-                </div>
-              </section>
-            )}
+            {/* Dynamically Rendered Category Sections */}
+            {[
+              { id: 'best-webtoon', data: categorizedManga['best-webtoon'] },
+              { id: 'golden-week', data: categorizedManga['golden-week'] },
+              { id: 'new-releases', data: categorizedManga['new-releases'] },
+              { id: 'action-fantasy', data: categorizedManga['action-fantasy'] },
+              { id: 'romance-drama', data: categorizedManga['romance-drama'] }
+            ]
+              .filter(cat => cat.data && cat.data.length > 0)
+              .map((cat, idx) => {
+                const isEven = idx % 2 === 0;
+                const bgClass = isEven ? "bg-gray-50 dark:bg-gray-800" : "bg-white dark:bg-gray-900";
+                
+                return (
+                  <section key={cat.id} className={`py-12 ${bgClass}`}>
+                    <div className="container mx-auto px-4">
+                      <SectionTitle 
+                        title={categoryInfo[cat.id as keyof typeof categoryInfo].title} 
+                        description={categoryInfo[cat.id as keyof typeof categoryInfo].description} 
+                        viewAllLink={`/category/${cat.id}`} 
+                      />
+                      <ComicGrid 
+                        mangaList={cat.data} 
+                        onLoadMore={() => { }} 
+                        hasMore={false} 
+                        limit={4} 
+                        showHeader={false} 
+                      />
+                    </div>
+                  </section>
+                );
+              })}
 
             {/* All Manga */}
             <section className="py-12 bg-white dark:bg-gray-900">
