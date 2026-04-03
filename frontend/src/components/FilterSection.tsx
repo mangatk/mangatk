@@ -259,7 +259,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
               {showCategoryDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowCategoryDropdown(false)}></div>
-                  <div className="absolute top-full left-0 right-auto sm:left-auto sm:right-0 mt-2 w-[280px] max-w-[90vw] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto custom-scrollbar">
+                  <div className="absolute top-full right-0 sm:right-0 mt-2 w-[calc(200%+0.75rem)] sm:w-[280px] max-h-80 overflow-y-auto custom-scrollbar bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-2">
                     <div className="grid grid-cols-1 gap-1">
                       {availableGenres.length > 0 ? availableGenres.map(cat => (
                         <label key={cat} className="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
