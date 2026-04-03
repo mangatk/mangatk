@@ -13,37 +13,70 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
   const [current, setCurrent] = useState(0);
   const featured = mangaList.slice(0, 5);
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
   const nextSlide = () => setCurrent((prev) => (prev + 1) % (featured.length || 1));
   const prevSlide = () => setCurrent((prev) => (prev - 1 + (featured.length || 1)) % (featured.length || 1));
 
   useEffect(() => {
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
-  }, [current]);
+  }, [current]); // Added dependency to reset interval on manual navigation
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset touch end
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    // LTR direction logic
+    if (isLeftSwipe) {
+      nextSlide();
+    }
+    if (isRightSwipe) {
+      prevSlide();
+    }
+  };
 
   if (!featured.length) return null;
 
   return (
     <section
-      className="relative bg-gray-900 overflow-hidden mx-auto w-full max-w-[1080px] h-[400px] rounded-2xl shadow-2xl mt-6 group"
+      className="relative bg-gray-900 overflow-hidden mx-auto w-full max-w-[1080px] h-[400px] rounded-2xl shadow-2xl mt-6 group select-none touch-pan-y"
       dir="ltr"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <div
         className="absolute inset-0 flex transition-transform duration-500 ease-in-out h-full"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {featured.map((manga) => (
-          <div key={manga.id} className="w-full h-full flex-shrink-0 relative">
-            <Link href={`/manga/${manga.id}`} className="block w-full h-full relative">
+          <div key={manga.id} className="w-full h-full flex-shrink-0 relative pointer-events-none sm:pointer-events-auto">
+            <Link href={`/manga/${manga.id}`} className="block w-full h-full relative pointer-events-auto">
 
               <ProxyImage
                 src={(manga as any).banner_image_url || manga.imageUrl}
                 alt={manga.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
               />
 
               {/* التراكب (Overlay) للنصوص */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 flex flex-col justify-end p-8 text-right" dir="rtl">
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 flex flex-col justify-end p-8 text-right pointer-events-none" dir="rtl">
                 <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-lg line-clamp-1">
                   {manga.title}
                 </h2>
@@ -71,13 +104,15 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
       {/* أزرار التنقل */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-blue-600 text-white p-3 rounded-full transition-all duration-200 z-10 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-blue-600 text-white p-3 rounded-full transition-all duration-200 z-10 backdrop-blur-sm opacity-0 group-hover:opacity-100 hidden sm:block"
+        aria-label="Previous Slide"
       >
         <FaChevronLeft size={20} />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-blue-600 text-white p-3 rounded-full transition-all duration-200 z-10 backdrop-blur-sm opacity-0 group-hover:opacity-100"
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-blue-600 text-white p-3 rounded-full transition-all duration-200 z-10 backdrop-blur-sm opacity-0 group-hover:opacity-100 hidden sm:block"
+        aria-label="Next Slide"
       >
         <FaChevronRight size={20} />
       </button>
@@ -86,6 +121,7 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
         {featured.map((_, idx) => (
           <button
+            aria-label={`Go to slide ${idx + 1}`}
             key={idx}
             onClick={() => setCurrent(idx)}
             className={`transition-all duration-300 rounded-full ${current === idx ? 'bg-blue-500 w-8 h-2' : 'bg-white/50 w-2 h-2 hover:bg-white'

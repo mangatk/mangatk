@@ -218,7 +218,8 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
             <SearchBar onSearch={(q: string) => onFilter({ query: q })} />
           </div>
 
-          <div className="flex flex-wrap gap-3 items-center justify-end w-full md:w-auto relative z-20">
+          {/* Dropdowns Container (Grid on Mobile, Flex on Desktop) */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 items-center justify-end w-full md:w-auto relative z-20">
 
             {/* Type Dropdown */}
             <select
@@ -227,7 +228,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                 setType(e.target.value);
                 onFilter({ status, type: e.target.value, genres: selectedGenres, sortBy: order });
               }}
-              className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+              className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
               {storyTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -239,16 +240,16 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                 setStatus(e.target.value);
                 onFilter({ status: e.target.value, type, genres: selectedGenres, sortBy: order });
               }}
-              className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+              className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
               {statuses.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
 
             {/* Genres Dropdown (Dynamic) */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <button
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                className={`px-4 py-2.5 rounded-xl border flex items-center gap-2 text-sm font-medium ${showCategoryDropdown || selectedGenres.length > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium ${showCategoryDropdown || selectedGenres.length > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
               >
                 <FaLayerGroup />
                 <span>الأنواع</span>
@@ -258,7 +259,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
               {showCategoryDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowCategoryDropdown(false)}></div>
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto custom-scrollbar">
+                  <div className="absolute top-full left-0 right-auto sm:left-auto sm:right-0 mt-2 w-[280px] max-w-[90vw] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 gap-1">
                       {availableGenres.length > 0 ? availableGenres.map(cat => (
                         <label key={cat} className="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
@@ -284,11 +285,10 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                 setOrder(e.target.value);
                 onSort(e.target.value); // Trigger sort immediately
               }}
-              className="pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+              className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
               {orders.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
-            {/* The filter button was removed as requested so filters are applied immediately */}
           </div>
         </div>
       </div>

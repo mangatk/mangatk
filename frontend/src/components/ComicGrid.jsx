@@ -80,8 +80,8 @@ export function ComicGrid({ mangaList, onLoadMore, hasMore, limit, showHeader = 
                   {manga.title}
                 </h3>
 
-                {/* التفاصيل الإضافية (تظهر دائماً على الجوال، وعند التحويم على الكمبيوتر) */}
-                <div className="grid grid-rows-[1fr] md:grid-rows-[0fr] md:group-hover:grid-rows-[1fr] transition-all duration-300 ease-in-out">
+                {/* التفاصيل الإضافية (مخفية على الجوال، وتظهر عند التحويم على الكمبيوتر) */}
+                <div className="hidden md:grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-all duration-300 ease-in-out">
                   <div className="overflow-hidden">
                     <div className="pt-2 mt-2 border-t border-white/20">
                       <div className="flex justify-between text-xs text-gray-300 mb-2">
