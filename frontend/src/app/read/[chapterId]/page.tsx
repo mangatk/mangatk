@@ -388,19 +388,39 @@ export default function ReaderPage() {
 
       {/* --- Footer Controls --- */}
       {showControls && (
-        <footer className="fixed bottom-0 left-0 right-0 h-12 bg-gray-900/90 border-t border-gray-800 flex items-center justify-between px-4 z-50 text-xs text-gray-400">
+        <footer className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-md border-t border-gray-700 flex items-center justify-between px-4 z-50">
           <div className="w-1/3">
             {chapter.prevChapterId ? (
-              <button onClick={() => router.push(`/read/${chapter.prevChapterId}?mangaId=${mangaId}`)} className="hover:text-white flex items-center gap-2"><FaChevronRight /> السابق</button>
-            ) : <span>البداية</span>}
+              <button
+                onClick={() => router.push(`/read/${chapter.prevChapterId}?mangaId=${mangaId}`)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-blue-600 border border-gray-600 hover:border-blue-500 text-gray-300 hover:text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-blue-500/20"
+              >
+                <FaChevronRight className="text-xs" /> السابق
+              </button>
+            ) : (
+              <span className="px-4 py-2 bg-gray-800/50 border border-gray-700 text-gray-600 rounded-xl text-xs font-bold cursor-not-allowed">البداية</span>
+            )}
           </div>
-          <div className="w-1/3 text-center">
-            {mode === 'vertical' ? <span>Webtoon Mode</span> : <span>{currentPage + 1} / {chapter.images.length}</span>}
+
+          <div className="w-1/3 text-center text-xs text-gray-400 font-medium">
+            {mode === 'vertical' ? (
+              <span className="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg">Webtoon</span>
+            ) : (
+              <span className="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg">{currentPage + 1} / {chapter.images.length}</span>
+            )}
           </div>
+
           <div className="w-1/3 flex justify-end">
             {chapter.nextChapterId ? (
-              <button onClick={() => router.push(`/read/${chapter.nextChapterId}?mangaId=${mangaId}`)} className="hover:text-white flex items-center gap-2">التالي <FaChevronLeft /></button>
-            ) : <span>النهاية</span>}
+              <button
+                onClick={() => router.push(`/read/${chapter.nextChapterId}?mangaId=${mangaId}`)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 border border-blue-500 hover:border-blue-400 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-blue-500/30"
+              >
+                التالي <FaChevronLeft className="text-xs" />
+              </button>
+            ) : (
+              <span className="px-4 py-2 bg-gray-800/50 border border-gray-700 text-gray-600 rounded-xl text-xs font-bold cursor-not-allowed">النهاية</span>
+            )}
           </div>
         </footer>
       )}

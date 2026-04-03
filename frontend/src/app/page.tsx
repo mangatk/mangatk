@@ -10,7 +10,6 @@ import { FilterSection } from '@/components/FilterSection';
 import { CategoryNav } from '@/components/CategoryNav';
 import { ComicGrid } from '@/components/ComicGrid';
 import { SectionTitle } from '@/components/SectionTitle';
-import { CTASection } from '@/components/CTASection';
 import { Footer } from '@/components/Footer';
 import { ProxyImage } from '@/components/ProxyImage';
 import { getMangaList, getMangaByCategory } from '@/services/api';
@@ -62,6 +61,7 @@ function HomeContent() {
   const [featuredManga, setFeaturedManga] = useState<Manga[]>([]);
   const [filteredManga, setFilteredManga] = useState<Manga[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [greeting, setGreeting] = useState('');
   
@@ -199,7 +199,7 @@ function HomeContent() {
 
   const isInitialMount = useRef(true);
 
-  // Server-side filtering logic
+  // Server-side filtering logic — uses isFiltering (not loading) so the page does NOT remount
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -207,7 +207,7 @@ function HomeContent() {
     }
 
     async function fetchFiltered() {
-      setLoading(true);
+      setIsFiltering(true);
       try {
         const response = await getMangaList(1, 20, currentFilters);
         setAllManga(response.results);
@@ -218,7 +218,7 @@ function HomeContent() {
       } catch (err) {
         console.error('Error fetching filtered manga:', err);
       } finally {
-        setLoading(false);
+        setIsFiltering(false);
       }
     }
 
@@ -292,7 +292,7 @@ function HomeContent() {
         )}
 
         {/* Filter Section */}
-        <FilterSection onFilter={handleFilter} onSort={handleSort} initialCategories={currentFilters.genres || []} />
+        <FilterSection onFilter={handleFilter} onSort={handleSort} initialGenres={currentFilters.genres || []} />
         <CategoryNav onCategorySelect={handleCategorySelect} />
 
         {/* Search Results or Main Content */}
@@ -301,7 +301,7 @@ function HomeContent() {
             <div className="container mx-auto px-4">
               <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <SectionTitle
-                  title={`نتائج البحث (${filteredManga.length})`}
+                  title={isFiltering ? 'جاري التصفية...' : `نتائج البحث (${filteredManga.length})`}
                   description="المانجا التي تطابق معايير البحث الخاصة بك"
                 />
                 <button
@@ -312,7 +312,13 @@ function HomeContent() {
                   إلغاء الفلتر والعودة
                 </button>
               </div>
-              <ComicGrid mangaList={filteredManga} onLoadMore={() => { }} hasMore={false} showHeader={false} limit={undefined} />
+              {isFiltering ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <ComicGrid mangaList={filteredManga} onLoadMore={() => { }} hasMore={false} showHeader={false} limit={undefined} />
+              )}
             </div>
           </section>
         ) : (
@@ -380,40 +386,24 @@ function HomeContent() {
             <section className="py-12 bg-white dark:bg-gray-900">
               <div className="container mx-auto px-4">
                 <SectionTitle title="جميع المانجا" description="استكشف مكتبتنا الكاملة" viewAllLink="/browse" />
-                <ComicGrid mangaList={allManga} onLoadMore={() => { }} hasMore={allManga.length > 12} limit={12} showHeader={false} />
+                <ComicGrid mangaList={allManga} onLoadMore={() => { }} hasMore={false} limit={12} showHeader={false} />
               </div>
             </section>
           </>
         )}
 
-        {/* CTAs للتواصل */}
-        <CTASection />
+        <div className="flex justify-center my-12">
+          <Link
+            href="/browse"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-4 rounded-xl font-bold text-lg transition-all hover:scale-105 shadow-xl hover:shadow-2xl flex items-center gap-3"
+          >
+            <span>عرض قائمة المانجا الكاملة</span>
+            <svg className="w-5 h-5 rtl:scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </Link>
+        </div>
 
-        {/* Load More Button */}
-        {!loading && hasMore && (
-          <div className="flex justify-center my-12">
-            <button
-              onClick={loadMoreManga}
-              disabled={loadingMore}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingMore ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  جاري التحميل...
-                </span>
-              ) : (
-                `تحميل المزيد (${totalCount - allManga.length} متبقية)`
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Footer Footer */}
-        <Footer />
       </div>
       <Footer />
     </main>

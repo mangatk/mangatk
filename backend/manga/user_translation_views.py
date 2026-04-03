@@ -507,6 +507,26 @@ def download_translated_cbz(request, job_id):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         response['Content-Length'] = os.path.getsize(job.output_file_path)
         
+        # Cleanup original images to save space since the translation was downloaded
+        # Keep the translated images and output zip for the admin to review
+        if job.original_images_paths:
+            logger.info(f"Cleaning up original images for job {job.id}")
+            for img_info in job.original_images_paths:
+                try:
+                    local_path = img_info.get('local_path')
+                    if local_path and os.path.exists(local_path):
+                        os.unlink(local_path)
+                except Exception as e:
+                    logger.error(f"Failed to delete original image {local_path}: {e}")
+            
+            # Clear the original paths so we know it's cleaned and admin doesn't try to access them
+            job.original_images_paths = []
+            
+            # Optionally change status if you want the admin dashboard to explicitly say "Downloaded by User"
+            # job.status = 'downloaded' 
+            
+            job.save()
+            
         return response
         
     except TranslationJob.DoesNotExist:

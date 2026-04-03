@@ -50,9 +50,26 @@ export default function ProfilePage() {
    const [replyText, setReplyText] = useState('');
 
    // اللقب المجهز
-   const [equippedTitle, setEquippedTitle] = useState<{ id: string; title: string; rarity: string; iconUrl?: string } | null>(null);
+   const [equippedTitle, setEquippedTitle] = useState<{ id: string; title: string; rarity: string; iconUrl?: string } | null>(() => {
+      // تحميل فوري من الكاش المحلي حتى قبل استجابة API
+      if (typeof window !== 'undefined') {
+         const titleId = localStorage.getItem('equipped_title');
+         const titleName = localStorage.getItem('equipped_title_name');
+         const titleRarity = localStorage.getItem('equipped_title_rarity');
+         const titleIcon = localStorage.getItem('equipped_title_icon');
+         if (titleId && titleName) {
+            return { id: titleId, title: titleName, rarity: titleRarity || 'common', iconUrl: titleIcon || '' };
+         }
+      }
+      return null;
+   });
    // لون خلفية شارة اللقب القابل للتعديل
-   const [badgeColor, setBadgeColor] = useState<string>('');
+   const [badgeColor, setBadgeColor] = useState<string>(() => {
+      if (typeof window !== 'undefined') {
+         return localStorage.getItem('badge_color') || '';
+      }
+      return '';
+   });
    const [showColorPicker, setShowColorPicker] = useState(false);
    const PRESET_COLORS = [
       '#1e40af','#7c3aed','#be185d','#047857','#b45309',
@@ -108,16 +125,8 @@ export default function ProfilePage() {
                   } else {
                      setEquippedTitle({ id: profileData.equipped_title, title: profileData.equipped_title, rarity: 'common' });
                   }
-               } else {
-                  // فالباك من localStorage
-                  const titleId = localStorage.getItem('equipped_title');
-                  const titleName = localStorage.getItem('equipped_title_name');
-                  const titleRarity = localStorage.getItem('equipped_title_rarity');
-                  const titleIcon = localStorage.getItem('equipped_title_icon');
-                  if (titleId && titleName) {
-                     setEquippedTitle({ id: titleId, title: titleName, rarity: titleRarity || 'common', iconUrl: titleIcon || '' });
-                  }
                }
+               // ملاحظة: اللون يُقرأ مباشرة من useState initializer، لا نحتاج لقراءته هنا
             })
             .catch(err => console.error('Error fetching profile/achievements:', err));
 

@@ -276,188 +276,252 @@ export default function TranslatePage() {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300"> {/* Changed div class */}
-            <Header /> {/* Added Header component */}
-            <div className="container mx-auto px-4 py-8"> {/* Changed div class */}
-                {/* Header Section */}
-                <div className="text-center mb-8"> {/* Changed mb-12 to mb-8 */}
-                    <h1 className="text-5xl font-bold text-white mb-4 flex items-center justify-center gap-3">
-                        <FaRobot className="text-blue-400" />
-                        ترجمة المانجا بالذكاء الاصطناعي
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 transition-colors duration-300">
+            <Header />
+
+            {/* Hero Banner */}
+            <div className="relative overflow-hidden pt-8 pb-12">
+                {/* Decorative blobs */}
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-10 right-1/4 w-72 h-72 bg-purple-400/10 dark:bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="container mx-auto px-4 relative z-10 text-center">
+                    {/* Icon + Title */}
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-2xl shadow-blue-500/30 mb-6 text-4xl">
+                        <FaRobot className="text-white" />
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">
+                        ترجمة المانجا{' '}
+                        <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+                            بالذكاء الاصطناعي
+                        </span>
                     </h1>
-                    <p className="text-gray-400 text-lg mb-4">
-                        ارفع فصل من المانجا واحصل على الترجمة تلقائياً
+                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-6 max-w-xl mx-auto">
+                        ارفع فصل من المانجا وسنترجمه تلقائياً إلى العربية باستخدام أحدث تقنيات الذكاء الاصطناعي
                     </p>
 
-                    {/* Points Display */}
+                    {/* Points Badge */}
                     {userPoints !== null && (
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-600/50 rounded-lg px-6 py-3">
-                            <span className="text-yellow-400 font-bold text-lg">{userPoints}</span>
-                            <span className="text-gray-300">نقطة</span>
-                            <span className="text-gray-500 mx-2">|</span>
-                            <span className="text-gray-400 text-sm">التكلفة: {requiredPoints} نقطة</span>
+                        <div className="inline-flex items-center gap-3 bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-yellow-300/50 dark:border-yellow-500/30 rounded-2xl px-6 py-3 shadow-lg shadow-yellow-500/5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl">🪙</span>
+                                <span className="text-yellow-600 dark:text-yellow-400 font-black text-xl">{userPoints}</span>
+                                <span className="text-gray-500 dark:text-gray-400 font-medium">نقطة</span>
+                            </div>
+                            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                <span>التكلفة:</span>
+                                <span className="font-bold text-purple-600 dark:text-purple-400">{requiredPoints}</span>
+                                <span>نقطة</span>
+                            </div>
                         </div>
                     )}
                 </div>
+            </div>
 
-                {/* Upload Section */}
+            <div className="container mx-auto px-4 pb-16 max-w-3xl">
+
+                {/* ===== Upload Section ===== */}
                 {!currentJob && (
-                    <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-gray-700 p-8 mb-8">
-                        <div className="flex flex-col items-center">
-                            <div className="w-full max-w-2xl">
-                                {/* Language Selection */}
-                                <div className="mb-8 bg-blue-900/20 border border-blue-600/30 rounded-xl p-6">
-                                    <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                                        <span className="text-blue-400">⚠️</span>
-                                        اختيار اللغة (ضروري للترجمة)
-                                    </h3>
-                                    <p className="text-gray-400 text-sm mb-4">
-                                        يجب اختيار لغة المصدر الصحيحة للحصول على أفضل نتائج الترجمة
+                    <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl rounded-3xl border border-white dark:border-gray-700/50 shadow-xl shadow-gray-200/50 dark:shadow-black/30 p-8 mb-6">
+
+                        {/* Language Selection */}
+                        <div className="mb-8 p-5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40">
+                            <h3 className="text-gray-800 dark:text-white font-bold text-base mb-1 flex items-center gap-2">
+                                <span className="text-xl">🌐</span>
+                                اختيار لغة المصدر
+                                <span className="text-red-500 text-xs font-black bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">ضروري</span>
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
+                                اختر اللغة الأصلية للمانجا للحصول على أفضل نتائج
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Source Language */}
+                                <div>
+                                    <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">
+                                        من (لغة المصدر) *
+                                    </label>
+                                    <select
+                                        value={sourceLanguage}
+                                        onChange={(e) => setSourceLanguage(e.target.value)}
+                                        className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                                        required
+                                    >
+                                        <option value="">اختر لغة المصدر</option>
+                                        <option value="chinese">🇨🇳 صيني</option>
+                                        <option value="japanese">🇯🇵 ياباني</option>
+                                        <option value="korean">🇰🇷 كوري</option>
+                                        <option value="english">🇬🇧 إنجليزي</option>
+                                    </select>
+                                </div>
+
+                                {/* Target Language (Fixed) */}
+                                <div>
+                                    <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">
+                                        إلى (لغة الهدف)
+                                    </label>
+                                    <div className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-500 dark:text-gray-400 flex items-center gap-3 shadow-sm">
+                                        <span className="text-2xl">🇸🇦</span>
+                                        <span className="font-medium">عربي</span>
+                                        <span className="mr-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">ثابت</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* File Upload Zone */}
+                        <label
+                            htmlFor="file-input"
+                            className={`relative flex flex-col items-center justify-center w-full h-52 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 group
+                                ${file
+                                    ? 'border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-900/10'
+                                    : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/30 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                }`}
+                        >
+                            <input
+                                id="file-input"
+                                type="file"
+                                accept=".zip,.cbz"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                            />
+                            {file ? (
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-16 h-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-3xl shadow-inner">
+                                        <FaCheckCircle className="text-green-500" />
+                                    </div>
+                                    <p className="font-bold text-gray-800 dark:text-white text-sm">{file.name}</p>
+                                    <p className="text-green-600 dark:text-green-400 text-xs bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full font-medium">
+                                        {(file.size / 1024 / 1024).toFixed(2)} MB ✓
                                     </p>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Source Language */}
-                                        <div>
-                                            <label className="block text-gray-300 text-sm font-medium mb-2">
-                                                من (لغة المصدر) *
-                                            </label>
-                                            <select
-                                                value={sourceLanguage}
-                                                onChange={(e) => setSourceLanguage(e.target.value)}
-                                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
-                                                required
-                                            >
-                                                <option value="">اختر لغة المصدر</option>
-                                                <option value="chinese">🇨🇳 صيني</option>
-                                                <option value="japanese">🇯🇵 ياباني</option>
-                                                <option value="korean">🇰🇷 كوري</option>
-                                                <option value="english">🇬🇧 إنجليزي</option>
-                                            </select>
-                                        </div>
-
-                                        {/* Target Language (Fixed) */}
-                                        <div>
-                                            <label className="block text-gray-300 text-sm font-medium mb-2">
-                                                إلى (لغة الهدف)
-                                            </label>
-                                            <div className="w-full bg-gray-800 border border-gray-600 rounded-lg py-3 px-4 text-gray-400 flex items-center gap-2">
-                                                <span className="text-xl">🇸🇦</span>
-                                                <span>عربي (ثابت)</span>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
-                                <label className="block text-gray-300 text-lg font-semibold mb-4 text-center">
-                                    اختر ملف الفصل
-                                </label>
-
-                                <div className="relative">
-                                    <input
-                                        id="file-input"
-                                        type="file"
-                                        accept=".zip,.cbz"
-                                        onChange={handleFileSelect}
-                                        className="w-full bg-gray-700 border-2 border-dashed border-gray-600 rounded-xl py-12 px-6 text-white text-center cursor-pointer hover:border-blue-500 transition-colors file:hidden"
-                                    />
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                        <FaUpload className="text-6xl text-gray-500 mb-4" />
-                                        <p className="text-gray-400">
-                                            {file ? file.name : 'اسحب الملف هنا أو اضغط للاختيار'}
+                            ) : (
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors shadow-inner">
+                                        <FaUpload className="text-gray-400 dark:text-gray-500 text-2xl group-hover:text-blue-500 transition-colors" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-bold text-gray-700 dark:text-gray-300 text-sm">
+                                            اسحب الملف هنا <span className="text-blue-500 dark:text-blue-400">أو انقر للاختيار</span>
                                         </p>
-                                        {file && (
-                                            <p className="text-green-400 text-sm mt-2">
-                                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                                            </p>
-                                        )}
+                                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">يدعم: ZIP, CBZ</p>
                                     </div>
                                 </div>
+                            )}
+                        </label>
 
-                                <button
-                                    onClick={handleUpload}
-                                    disabled={uploading || !file}
-                                    className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3"
-                                >
-                                    {uploading ? (
-                                        <>
-                                            <FaSpinner className="animate-spin" />
-                                            جاري الرفع...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <FaRobot />
-                                            رفع وترجمة
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
+                        {/* Upload Button */}
+                        <button
+                            onClick={handleUpload}
+                            disabled={uploading || !file || !sourceLanguage}
+                            className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-gray-700 dark:disabled:to-gray-700 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-3"
+                        >
+                            {uploading ? (
+                                <>
+                                    <FaSpinner className="animate-spin" />
+                                    جاري الرفع...
+                                </>
+                            ) : (
+                                <>
+                                    <FaRobot />
+                                    رفع وترجمة
+                                </>
+                            )}
+                        </button>
                     </div>
                 )}
 
-                {/* Progress Section */}
+                {/* ===== Progress Section ===== */}
                 {currentJob && !['completed', 'failed'].includes(currentJob.status) && (
-                    <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-gray-700 p-8 mb-8">
-                        <div className="flex items-center justify-center gap-3 mb-4">
-                            <FaSpinner className="text-blue-400 animate-spin text-2xl" />
-                            <h2 className="text-2xl font-bold text-white">{getStatusDisplay()}</h2>
-                        </div>
+                    <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl rounded-3xl border border-white dark:border-gray-700/50 shadow-xl p-8 mb-6">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            {/* Spinning icon */}
+                            <div className="relative w-20 h-20">
+                                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 opacity-20 animate-ping" />
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
+                                    <FaSpinner className="text-white text-2xl animate-spin" />
+                                </div>
+                            </div>
 
-                        <div className="w-full bg-gray-700 rounded-full h-6 overflow-hidden mb-4">
-                            <div
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-500 flex items-center justify-center text-white text-sm font-bold"
-                                style={{ width: `${getProgressPercentage()}%` }}
-                            >
-                                {getProgressPercentage()}%
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white">{getStatusDisplay()}</h2>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                {currentJob.translated_pages} من {currentJob.total_pages} صفحة تمت ترجمتها
+                            </p>
+
+                            {/* Progress Bar */}
+                            <div className="w-full">
+                                <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                                    <span>التقدم</span>
+                                    <span>{getProgressPercentage()}%</span>
+                                </div>
+                                <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
+                                    <div
+                                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
+                                        style={{ width: `${getProgressPercentage()}%` }}
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-pulse" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <p className="text-center text-gray-400">
-                            {currentJob.translated_pages} من {currentJob.total_pages} صفحة
-                        </p>
                     </div>
                 )}
 
-                {/* Preview Section */}
+                {/* ===== Preview + Download Section ===== */}
                 {currentJob && currentJob.status === 'completed' && currentJob.original_images && currentJob.translated_images && (
                     <>
-                        <ChapterPreview
-                            originalImages={currentJob.original_images}
-                            translatedImages={currentJob.translated_images}
-                            viewMode={viewMode}
-                            onViewModeChange={setViewMode}
-                        />
+                        <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl rounded-3xl border border-white dark:border-gray-700/50 shadow-xl p-6 mb-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                    <FaCheckCircle className="text-green-500 text-lg" />
+                                </div>
+                                <div>
+                                    <h2 className="text-gray-900 dark:text-white font-black text-lg">اكتملت الترجمة!</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">{currentJob.total_pages} صفحة تم ترجمتها بنجاح</p>
+                                </div>
+                            </div>
 
-                        <div className="mt-8 flex gap-4 justify-center">
-                            <button
-                                onClick={handleDownload}
-                                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center gap-3"
-                            >
-                                <FaDownload />
-                                تنزيل CBZ
-                            </button>
+                            <ChapterPreview
+                                originalImages={currentJob.original_images}
+                                translatedImages={currentJob.translated_images}
+                                viewMode={viewMode}
+                                onViewModeChange={setViewMode}
+                            />
 
-                            <button
-                                onClick={handleReset}
-                                className="bg-gray-700 hover:bg-gray-600 text-white px-8 py-4 rounded-xl font-medium text-lg transition-colors"
-                            >
-                                ترجمة فصل جديد
-                            </button>
+                            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={handleDownload}
+                                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white py-4 rounded-2xl font-bold text-base transition-all shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-3"
+                                >
+                                    <FaDownload />
+                                    تنزيل ملف CBZ
+                                </button>
+                                <button
+                                    onClick={handleReset}
+                                    className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white py-4 rounded-2xl font-bold text-base transition-all border border-gray-200 dark:border-gray-600"
+                                >
+                                    ترجمة فصل جديد
+                                </button>
+                            </div>
                         </div>
                     </>
                 )}
 
-                {/* Error Section */}
+                {/* ===== Error Section ===== */}
                 {(error || (currentJob && currentJob.status === 'failed')) && (
-                    <div className="bg-red-900/30 border-2 border-red-600 rounded-xl p-6 flex items-start gap-3">
-                        <FaExclamationTriangle className="text-red-400 text-2xl mt-1" />
-                        <div>
-                            <h3 className="text-red-400 font-bold text-lg mb-2">حدث خطأ</h3>
-                            <p className="text-red-300">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-600/40 rounded-2xl p-6 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                            <FaExclamationTriangle className="text-red-500 text-lg" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-red-600 dark:text-red-400 font-bold text-base mb-1">حدث خطأ</h3>
+                            <p className="text-red-500 dark:text-red-300 text-sm">
                                 {error || currentJob?.error_message || 'حدث خطأ غير متوقع'}
                             </p>
                             <button
                                 onClick={handleReset}
-                                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+                                className="mt-4 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
                             >
                                 إعادة المحاولة
                             </button>
