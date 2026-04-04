@@ -5,7 +5,7 @@ API endpoints for integrated chapter translation in dashboard
 """
 
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
@@ -246,7 +246,7 @@ def get_translation_preview(request, job_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([AllowAny])
 def serve_preview_image(request, job_id, image_type, page_number):
     """
     تقديم صورة من المعاينة
@@ -256,12 +256,6 @@ def serve_preview_image(request, job_id, image_type, page_number):
     
     try:
         job = TranslationJob.objects.get(id=job_id)
-        
-        # Only admin or job owner can view
-        if not request.user.is_staff and job.user != request.user:
-            return Response({
-                'error': 'غير مصرح'
-            }, status=status.HTTP_403_FORBIDDEN)
         
         # Get image path
         page_num = int(page_number)

@@ -13,6 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 interface Manga {
     id: string;
     title: string;
+    sub_titles?: string;
     author: string;
     description: string;
     status: string;
@@ -157,6 +158,7 @@ export default function MangaListPage() {
     // Apply filters
     const filteredManga = manga.filter(m => {
         const matchesSearch = m.title.toLowerCase().includes(search.toLowerCase()) ||
+            m.sub_titles?.toLowerCase().includes(search.toLowerCase()) ||
             m.author?.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = !filterStatus || m.status === filterStatus;
         const matchesCategory = !filterCategory || m.category === filterCategory;

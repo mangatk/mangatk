@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { FaSun, FaMoon, FaSignOutAlt, FaBell, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSun, FaMoon, FaSignOutAlt, FaBell, FaBars, FaTimes, FaSearch } from 'react-icons/fa';
 import { SearchBar } from './SearchBar';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -16,6 +16,7 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
 
   const { newUnlock, closeNotification } = useAchievements();
@@ -35,14 +36,13 @@ export function Header() {
     document.documentElement.classList.toggle('dark', newMode);
   };
 
-  // 🟢 تعريف روابط القائمة هنا
   const navItems = [
     { name: 'الرئيسية', path: '/' },
-    { name: 'قائمة المانجا', path: '/browse' }, // ✅ تم الربط هنا
-    { name: 'الأحدث', path: '/browse' },        // يمكن توجيهها للفلترة مستقبلاً
-    { name: 'التصنيفات', path: '/browse' },      // يمكن توجيهها لصفحة التصنيفات
-    { name: 'ترجمة AI', path: '/translate' },   // 🤖 صفحة الترجمة
-    { name: 'الاشتراكات', path: '/subscriptions' } // 💎 صفحة الاشتراكات
+    { name: 'قائمة المانجا', path: '/browse' },
+    { name: 'الأحدث', path: '/browse?sort=latest' },
+    { name: 'المشهورة', path: '/browse?sort=views' },
+    { name: 'ترجمة AI', path: '/translate' },
+    { name: 'الاشتراكات', path: '/subscriptions' }
   ];
 
   return (
@@ -50,12 +50,12 @@ export function Header() {
       <AchievementToast achievement={newUnlock} onClose={closeNotification} />
 
       <header className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 transition-colors duration-300">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-4">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-4 relative">
 
           {/* الشعار والقوائم */}
-          <div className="flex items-center gap-4 md:gap-8">
+          <div className="flex items-center gap-4 md:gap-8 flex-1">
             <button 
-              className="md:hidden text-gray-600 dark:text-gray-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="lg:hidden text-gray-600 dark:text-gray-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle Mobile Menu"
             >
@@ -64,7 +64,7 @@ export function Header() {
             <Link href="/" className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               MangaTK
             </Link>
-            <nav className="hidden md:block">
+            <nav className="hidden lg:block">
               <ul className="flex space-x-6 space-x-reverse font-medium">
                 {/* 🟢 استخدام navItems للرسم */}
                 {navItems.map((item, idx) => (
@@ -82,12 +82,24 @@ export function Header() {
           </div>
 
           {/* البحث */}
-          <div className="hidden md:block flex-1 max-w-md mx-4">
-            <SearchBar />
+          <div className="flex-1 flex justify-end lg:justify-center mx-2 lg:mx-4">
+            {/* عرض شريط البحث دائماً في الشاشات الكبيرة */}
+            <div className="w-full max-w-md hidden lg:block">
+              <SearchBar />
+            </div>
+
+            {/* الأيقونة فقط للشاشات الأصغر */}
+            <button 
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0 ml-auto"
+              aria-label="Search"
+            >
+              {searchOpen ? <FaTimes className="text-xl" /> : <FaSearch className="text-xl" />}
+            </button>
           </div>
 
           {/* أدوات المستخدم */}
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-4 ml-2">
             <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
               {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon />}
             </button>
@@ -216,17 +228,19 @@ export function Header() {
           </div>
         </div>
 
-        {/* --- القائمة المنزلقة للجوال (Mobile Slide-Down) --- */}
+        {/* --- القائمة المنزلقة للبحث للجوال (Mobile Search Slide-Down) --- */}
+        {searchOpen && (
+          <div className="lg:hidden px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-300 w-full shadow-inner">
+            <SearchBar autoFocus />
+          </div>
+        )}
+
+        {/* --- القائمة المنزلقة للجوال (Mobile Nav Slide-Down) --- */}
         {mobileMenuOpen && (
           <div
             className="md:hidden fixed inset-x-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 z-[49] animate-in slide-in-from-top-2 duration-300 overflow-y-auto"
             style={{ top: '56px', maxHeight: 'calc(100vh - 56px)' }}
           >
-            {/* Search Bar on Mobile */}
-            <div className="w-full">
-              <SearchBar />
-            </div>
-
             <nav className="flex flex-col gap-3">
               {navItems.map((item, idx) => (
                 <Link

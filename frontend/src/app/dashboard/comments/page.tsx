@@ -11,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 interface Comment {
     id: string;
     user: { id: string; username: string; };
+    user_name?: string;
     content: string;
     comment_type: string;
     manga?: { id: string; title: string; };
@@ -168,7 +169,7 @@ export default function CommentsPage() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-white font-medium">{comment.user?.username || 'مجهول'}</span>
+                                        <span className="text-white font-medium">{comment.user_name || comment.user?.username || 'مجهول'}</span>
                                         <span className="text-gray-500 text-sm">
                                             {new Date(comment.created_at).toLocaleDateString('ar')}
                                         </span>

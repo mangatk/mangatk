@@ -127,8 +127,8 @@ export function ChapterRating({ mangaId, chapterId, currentMangaRating }: Chapte
           onClick={() => handleStarClick(i)}
           onMouseEnter={() => setHoverRating(i)}
           onMouseLeave={() => setHoverRating(0)}
-          disabled={isLoading}
-          className={`text-3xl md:text-4xl transition-transform duration-200 hover:scale-125 focus:outline-none ${colorClass} ${isLoading ? 'opacity-50' : ''}`}
+          disabled={isLoading || isSubmitted}
+          className={`text-3xl md:text-4xl transition-transform duration-200 hover:scale-125 focus:outline-none ${colorClass} ${(isLoading || isSubmitted) ? 'opacity-50' : ''}`}
         >
           <StarIcon />
         </button>
@@ -165,8 +165,8 @@ export function ChapterRating({ mangaId, chapterId, currentMangaRating }: Chapte
           step="0.1"
           value={rating}
           onChange={handleSliderChange}
-          disabled={isLoading}
-          className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-400 hover:accent-yellow-300 transition-all"
+          disabled={isLoading || isSubmitted}
+          className={`w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-400 hover:accent-yellow-300 transition-all ${(isLoading || isSubmitted) ? 'opacity-50' : ''}`}
         />
         <div className="flex justify-between text-xs text-gray-500 mt-2 px-1 font-mono">
           <span>0.0</span>
@@ -188,17 +188,10 @@ export function ChapterRating({ mangaId, chapterId, currentMangaRating }: Chapte
           {isLoading ? 'جاري الحفظ...' : 'أرسل التقييم'}
         </button>
       ) : (
-        <div className="animate-in fade-in zoom-in duration-500 bg-green-500/10 border border-green-500/30 rounded-xl p-4 max-w-md mx-auto">
-          <p className="text-green-400 font-bold mb-1">تم احتساب تقييمك! ✅</p>
-          <p className="text-sm text-gray-300">
-            أصبح تقييم المانجا العام:
-            <span className={`mx-2 font-bold ${newMangaRating > currentMangaRating ? 'text-green-400' : 'text-red-400'}`}>
-              {newMangaRating}
-            </span>
-          </p>
+        <div className="animate-in fade-in duration-500 max-w-md mx-auto">
           <button
             onClick={() => setIsSubmitted(false)}
-            className="text-xs text-gray-500 hover:text-white mt-2 underline"
+            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all transform hover:-translate-y-1"
           >
             تعديل التقييم
           </button>

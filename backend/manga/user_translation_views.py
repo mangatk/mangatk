@@ -5,7 +5,7 @@ API endpoints for public translation service (regular users)
 """
 
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
@@ -401,7 +401,7 @@ def get_translation_preview(request, job_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def serve_preview_image(request, job_id, image_type, page_number):
     """
     تقديم صورة من المعاينة
@@ -411,12 +411,6 @@ def serve_preview_image(request, job_id, image_type, page_number):
     
     try:
         job = TranslationJob.objects.get(id=job_id)
-        
-        # Only job owner can view
-        if job.user != request.user and not request.user.is_staff:
-            return Response({
-                'error': 'غير مصرح'
-            }, status=status.HTTP_403_FORBIDDEN)
         
         # Get image path
         page_num = int(page_number)

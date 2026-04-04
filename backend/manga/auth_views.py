@@ -162,11 +162,17 @@ def profile_view(request):
         equipped_title = request.data.get('equipped_title')
         if equipped_title is not None:
             user.equipped_title = equipped_title
-            user.save()
+        
+        name = request.data.get('name')
+        if name and not user.first_name:
+            user.first_name = name
+            
+        user.save()
     
     return Response({
         'id': str(user.id),
         'username': user.username,
+        'first_name': user.first_name,
         'email': user.email,
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser,

@@ -4,10 +4,10 @@ import AOS from 'aos';
 
 export function QuickMenu() {
   const items = [
-    { icon: FaStar, label: 'New Features', desc: 'Discover latest updates', href: '#' },
-    { icon: FaRocket, label: 'New Releases', desc: 'Fresh manga drops', href: '/category/new-releases' },
-    { icon: FaCalendarAlt, label: 'Events', desc: 'Join community events', href: '#' },
-    { icon: FaLock, label: 'Exclusive', desc: 'Premium content only', href: '#' },
+    { icon: FaStar, label: 'ميزات جديدة', desc: 'اكتشف أحدث الميزات', href: '#' },
+    { icon: FaRocket, label: 'أحدث التنزيلات', desc: 'أحدث فصول المانجا', href: '/browse?sort=latest' },
+    { icon: FaCalendarAlt, label: 'الفعاليات', desc: 'انضم لفعاليات المجتمع', href: '#' },
+    { icon: FaLock, label: 'حصري', desc: 'محتوى المانجا المميز', href: '#' },
   ];
 
   return (

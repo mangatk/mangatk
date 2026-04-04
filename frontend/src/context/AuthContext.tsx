@@ -70,11 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isMounted) setToken(accessToken);
         localStorage.setItem('manga_token', accessToken);
 
-        // Fetch our custom user profile from Django backend
+        // Determine correct display name from Auth0
+        const activeName = auth0User?.nickname || auth0User?.name || auth0User?.email?.split('@')[0];
+
+        // Fetch our custom user profile from Django backend while syncing the name
         const res = await fetch(`${API_URL}/auth/profile/`, {
+          method: 'PATCH',
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
           },
+          body: JSON.stringify({ name: activeName || '' })
         });
 
         if (res.ok) {
@@ -82,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (isMounted) {
             setUser({
               id: data.id,
-              name: auth0User?.nickname || auth0User?.name || auth0User?.email?.split('@')[0] || data.username,
+              name: data.first_name || activeName || data.username,
               email: auth0User?.email || data.email,
               is_staff: data.is_staff,
               is_superuser: data.is_superuser,

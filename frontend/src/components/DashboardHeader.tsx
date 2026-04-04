@@ -15,6 +15,7 @@ export function DashboardHeader({ toggleSidebar }: DashboardHeaderProps) {
     const { user, logout } = useAuth();
     const { notifications, unreadCount, markAllAsRead } = useNotifications();
     const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     return (
         <header className="sticky top-0 z-30 w-full bg-slate-900/60 backdrop-blur-xl border-b border-white/5 shadow-sm">
@@ -95,16 +96,50 @@ export function DashboardHeader({ toggleSidebar }: DashboardHeaderProps) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="text-left hidden md:block">
-                            <p className="text-sm font-bold text-white">{user?.name || 'مدير'}</p>
-                            <p className="text-xs text-slate-400">الإدارة العليا</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] shadow-lg">
-                            <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center border border-white/10">
-                                <span className="text-white font-bold">{user?.name?.charAt(0) || 'M'}</span>
+                    <div className="relative">
+                        <button 
+                            onClick={() => setUserMenuOpen(!userMenuOpen)}
+                            className="flex items-center gap-3 p-1 rounded-full hover:bg-white/5 transition-colors"
+                        >
+                            <div className="text-left hidden md:block">
+                                <p className="text-sm font-bold text-white">{user?.name || 'مدير'}</p>
+                                <p className="text-xs text-slate-400">الإدارة العليا</p>
                             </div>
-                        </div>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] shadow-lg">
+                                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center border border-white/10">
+                                    <span className="text-white font-bold">{user?.name?.charAt(0) || 'M'}</span>
+                                </div>
+                            </div>
+                        </button>
+
+                        {userMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40 cursor-default" onClick={() => setUserMenuOpen(false)} />
+                                <div className="absolute top-full left-0 mt-3 w-48 bg-slate-800 rounded-xl shadow-2xl border border-white/10 overflow-hidden py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <a 
+                                        href="/profile" 
+                                        className="block px-4 py-3 hover:bg-slate-700/50 text-white font-semibold transition-colors border-b border-white/5"
+                                    >
+                                        الملف الشخصي
+                                    </a>
+                                    <a 
+                                        href="/" 
+                                        className="block px-4 py-3 hover:bg-slate-700/50 text-white font-semibold transition-colors border-b border-white/5"
+                                    >
+                                        الصفحة الرئيسية
+                                    </a>
+                                    <button 
+                                        onClick={() => {
+                                            setUserMenuOpen(false);
+                                            logout();
+                                        }}
+                                        className="w-full text-right px-4 py-3 hover:bg-red-500/10 text-red-400 font-semibold transition-colors"
+                                    >
+                                        تسجيل الخروج
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

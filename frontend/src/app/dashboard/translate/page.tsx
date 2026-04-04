@@ -295,17 +295,17 @@ export default function TranslatePage() {
 
                 // Backend returns URLs like /api/translation/preview/.../image/...
                 // So we need base URL WITHOUT /api suffix
-                const BASE_URL = 'http://localhost:8000';
+                const BASE_URL = API_URL.replace(/\/api\/?$/, '');
 
                 // Convert relative URLs to absolute
                 const originalImages = (data.original_images || []).map((img: PreviewImage) => ({
                     ...img,
-                    url: `${BASE_URL}${img.url}`
+                    url: img.url.startsWith('http') ? img.url : `${BASE_URL}${img.url}`
                 }));
 
                 const translatedImages = (data.translated_images || []).map((img: PreviewImage) => ({
                     ...img,
-                    url: `${BASE_URL}${img.url}`
+                    url: img.url.startsWith('http') ? img.url : `${BASE_URL}${img.url}`
                 }));
 
                 setCurrentJob({

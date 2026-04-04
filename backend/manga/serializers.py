@@ -397,7 +397,7 @@ class RatingSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer for comments on manga/chapters"""
-    user_name = serializers.CharField(source='user.username', read_only=True)
+    user_name = serializers.SerializerMethodField()
     user_avatar = serializers.SerializerMethodField()
     user_equipped_achievement_icon = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
@@ -438,6 +438,12 @@ class CommentSerializer(serializers.ModelSerializer):
             'username': obj.user.username
         }
         
+    def get_user_name(self, obj):
+        name = obj.user.first_name
+        if obj.user.last_name:
+            name = f"{name} {obj.user.last_name}".strip()
+        return name if name else obj.user.username
+
     def get_user_avatar(self, obj):
         return getattr(obj.user, 'avatar_url', getattr(obj.user, 'picture', None))
         
