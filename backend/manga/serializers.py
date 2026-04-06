@@ -14,7 +14,7 @@ class GenreSerializer(serializers.ModelSerializer):
     """Serializer for Genre model"""
     class Meta:
         model = Genre
-        fields = ['id', 'name', 'slug']
+        fields = ['id', 'name', 'name_ar', 'slug']
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):

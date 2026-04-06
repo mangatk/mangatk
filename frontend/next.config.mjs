@@ -4,8 +4,7 @@
 // export default nextConfig;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for much smaller Docker images
-  output: 'standalone',
+  // Standalone output disabled for PM2 deployment
   // تجاهل أخطاء التايب سكريبت لمنع توقف الرفع
   typescript: {
     ignoreBuildErrors: true,

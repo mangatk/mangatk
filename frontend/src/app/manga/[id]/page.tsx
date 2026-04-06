@@ -123,37 +123,38 @@ export default function MangaDetail() {
     }
   };
 
-  const filteredChapters = useMemo(() => {
+  // ١. رتّب الفصول تصاعديًا دائمًا لتحديد حدود الأجزاء
+  const sortedAsc = useMemo(() => {
     if (!manga?.chapters) {
-      // Fallback to chapterCount if no chapters array
       if (!manga) return [];
-      let chapters = Array.from({ length: manga.chapterCount }, (_, i) => ({
+      return Array.from({ length: manga.chapterCount }, (_, i) => ({
         id: `${i + 1}`,
         number: i + 1,
         title: `الفصل ${i + 1}`,
         releaseDate: '',
       }));
-      if (sortOrder === 'desc') chapters.reverse();
-      if (searchQuery) {
-        chapters = chapters.filter(ch => ch.number.toString().includes(searchQuery));
-      }
-      return chapters;
     }
+    return [...manga.chapters].sort((a, b) => a.number - b.number);
+  }, [manga]);
 
-    let chapters = [...manga.chapters];
-    if (sortOrder === 'desc') chapters.reverse();
-    if (searchQuery) {
-      chapters = chapters.filter(ch => ch.number.toString().includes(searchQuery));
-    }
-    return chapters;
-  }, [manga, sortOrder, searchQuery]);
+  // ٢. طبّق البحث على القائمة الكاملة المرتبة تصاعديًا
+  const filteredSortedAsc = useMemo(() => {
+    if (!searchQuery) return sortedAsc;
+    return sortedAsc.filter(ch => ch.number.toString().includes(searchQuery));
+  }, [sortedAsc, searchQuery]);
 
   const CHAPTERS_PER_PAGE = 50;
-  const totalPages = Math.ceil(filteredChapters.length / CHAPTERS_PER_PAGE);
-  const currentChapters = filteredChapters.slice(
-    chapterPage * CHAPTERS_PER_PAGE,
-    (chapterPage + 1) * CHAPTERS_PER_PAGE
-  );
+  const totalPages = Math.ceil(filteredSortedAsc.length / CHAPTERS_PER_PAGE);
+
+  // ٣. استخرج الجزء الحالي بالترتيب التصاعدي دائمًا
+  const currentChunkAsc = useMemo(() =>
+    filteredSortedAsc.slice(chapterPage * CHAPTERS_PER_PAGE, (chapterPage + 1) * CHAPTERS_PER_PAGE),
+  [filteredSortedAsc, chapterPage]);
+
+  // ٤. اعكس الجزء الحالي فقط إذا طُلب الترتيب التنازلي
+  const currentChapters = useMemo(() =>
+    sortOrder === 'desc' ? [...currentChunkAsc].reverse() : currentChunkAsc,
+  [currentChunkAsc, sortOrder]);
 
   if (loading) {
     return (
@@ -341,13 +342,12 @@ export default function MangaDetail() {
               {totalPages > 1 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {Array.from({ length: totalPages }).map((_, i) => {
-                    const chunk = filteredChapters.slice(i * CHAPTERS_PER_PAGE, (i + 1) * CHAPTERS_PER_PAGE);
+                    const chunk = filteredSortedAsc.slice(i * CHAPTERS_PER_PAGE, (i + 1) * CHAPTERS_PER_PAGE);
                     if (chunk.length === 0) return null;
 
-                    const firstChapter = chunk[0].number;
-                    const lastChapter = chunk[chunk.length - 1].number;
-                    const minCh = Math.min(firstChapter, lastChapter);
-                    const maxCh = Math.max(firstChapter, lastChapter);
+                    // الأجزاء دائمًا ثابتة بالأرقام التصاعدية
+                    const minCh = chunk[0].number;
+                    const maxCh = chunk[chunk.length - 1].number;
 
                     return (
                       <button

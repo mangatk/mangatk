@@ -196,11 +196,10 @@ export async function getCategories(): Promise<string[]> {
   return results.map((cat: any) => cat.slug);
 }
 
-export async function getGenres(): Promise<string[]> {
+export async function getGenres(): Promise<{ name: string; name_ar: string }[]> {
   const data = await fetchAPI<any>('/genres/');
   const results = extractResults(data);
-  // إرجاع الاسم فقط
-  return results.map((g: any) => g.name);
+  return results.map((g: any) => ({ name: g.name, name_ar: g.name_ar || '' }));
 }
 
 export async function getMangaByCategory(slug: string): Promise<Manga[]> {

@@ -178,7 +178,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
   }, [JSON.stringify(initialGenres)]);
 
   // حالة لتخزين الأنواع القادمة من السيرفر
-  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [availableGenres, setAvailableGenres] = useState<{ name: string; name_ar: string }[]>([])
 
   // جلب الأنواع عند تحميل الصفحة
   useEffect(() => {
@@ -205,9 +205,24 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
     onFilter({ status, type, genres: newGenres, sortBy: order });
   };
 
-  const statuses = ['All', 'Completed', 'Ongoing'];
-  const storyTypes = ['All', 'Manga', 'Manhwa', 'Manhua', 'Comic'];
-  const orders = ['Name', 'Latest Chapter', 'Most Popular', 'Rating'];
+  const statuses = [
+    { value: 'All', label: 'الكل' },
+    { value: 'Completed', label: 'مكتملة' },
+    { value: 'Ongoing', label: 'مستمرة' },
+  ];
+  const storyTypes = [
+    { value: 'All', label: 'الكل' },
+    { value: 'Manga', label: 'مانجا' },
+    { value: 'Manhwa', label: 'مانهوا' },
+    { value: 'Manhua', label: 'مانهوا (صيني)' },
+    { value: 'Comic', label: 'كوميك' },
+  ];
+  const orders = [
+    { value: 'Name', label: 'الاسم' },
+    { value: 'Latest Chapter', label: 'أحدث فصل' },
+    { value: 'Most Popular', label: 'الأكثر شهرة' },
+    { value: 'Rating', label: 'التقييم' },
+  ];
 
   return (
     <section className="py-6 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 relative z-40">
@@ -230,7 +245,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
               }}
               className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
-              {storyTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              {storyTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
 
             {/* Status Dropdown */}
@@ -242,7 +257,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
               }}
               className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
-              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+              {statuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
 
             {/* Genres Dropdown (Dynamic) */}
@@ -261,15 +276,15 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                   <div className="fixed inset-0 z-40" onClick={() => setShowCategoryDropdown(false)}></div>
                   <div className="absolute top-full right-0 sm:right-0 mt-2 w-[calc(200%+0.75rem)] sm:w-[280px] max-h-80 overflow-y-auto custom-scrollbar bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 p-2">
                     <div className="grid grid-cols-1 gap-1">
-                      {availableGenres.length > 0 ? availableGenres.map(cat => (
-                        <label key={cat} className="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
+                      {availableGenres.length > 0 ? availableGenres.map(g => (
+                        <label key={g.name} className="flex items-center px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={selectedGenres.includes(cat)}
-                            onChange={() => handleCategoryToggle(cat)}
+                            checked={selectedGenres.includes(g.name)}
+                            onChange={() => handleCategoryToggle(g.name)}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600 mr-3"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-200">{cat}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-200">{g.name_ar || g.name}</span>
                         </label>
                       )) : <div className="p-2 text-center text-sm text-gray-500">جاري التحميل...</div>}
                     </div>
@@ -287,7 +302,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
               }}
               className="w-full sm:w-auto pl-4 pr-8 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
             >
-              {orders.map(o => <option key={o} value={o}>{o}</option>)}
+              {orders.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>

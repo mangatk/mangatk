@@ -7,6 +7,7 @@ import { MSWProvider } from '@/mocks/MSWProvider';
 import { Inter } from 'next/font/google';
 import { ToastProvider } from '@/components/ToastProvider';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -27,7 +28,9 @@ export default function RootLayout({
           <Auth0ProviderWrapper>
             <AuthProvider>
               <NotificationProvider>
+              <LanguageProvider>
                 {children}
+              </LanguageProvider>
               </NotificationProvider>
             </AuthProvider>
           </Auth0ProviderWrapper>

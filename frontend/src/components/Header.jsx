@@ -9,9 +9,11 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementToast } from './AchievementToast';
 import { ProxyImage } from './ProxyImage';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function Header() {
   const { user, login, register, logout } = useAuth();
+  const { lang, toggleLang, t } = useLanguage();
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
@@ -37,12 +39,12 @@ export function Header() {
   };
 
   const navItems = [
-    { name: 'الرئيسية', path: '/' },
-    { name: 'قائمة المانجا', path: '/browse' },
-    { name: 'الأحدث', path: '/browse?sort=latest' },
-    { name: 'المشهورة', path: '/browse?sort=views' },
-    { name: 'ترجمة AI', path: '/translate' },
-    { name: 'الاشتراكات', path: '/subscriptions' }
+    { name: t('home'), path: '/' },
+    { name: t('browse'), path: '/browse' },
+    { name: t('latest'), path: '/browse?sort=latest' },
+    { name: t('popular'), path: '/browse?sort=views' },
+    { name: t('translate'), path: '/translate' },
+    { name: t('subscriptions'), path: '/subscriptions' }
   ];
 
   return (
@@ -104,6 +106,15 @@ export function Header() {
               {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon />}
             </button>
 
+            {/* زر تبديل اللغة */}
+            <button
+              onClick={toggleLang}
+              className="px-3 py-1.5 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all tracking-wider"
+              title={lang === 'ar' ? 'Switch to English' : 'التبديل للعربية'}
+            >
+              {lang === 'ar' ? 'EN' : 'ع'}
+            </button>
+
             {user && (
               <div className="relative">
                 <button 
@@ -126,7 +137,7 @@ export function Header() {
                     <div className="fixed inset-0 z-40 cursor-default" onClick={() => setNotifMenuOpen(false)} />
                     <div className="absolute top-full -left-24 sm:-left-32 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-800 dark:text-gray-200 flex justify-between items-center">
-                        <span>الإشعارات</span>
+                        <span>{t('notifications')}</span>
                       </div>
                       <div className="max-h-[60vh] overflow-y-auto">
                         {notifications.length > 0 ? (
@@ -144,7 +155,7 @@ export function Header() {
                         ) : (
                           <div className="px-6 py-8 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
                             <FaBell className="text-gray-300 dark:text-gray-600 text-4xl mb-2" />
-                            لا توجد إشعارات حالياً
+                            {t('noNotifs')}
                           </div>
                         )}
                       </div>
@@ -183,7 +194,7 @@ export function Header() {
                 {menuOpen && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">مسجل باسم</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('loggedAs')}</p>
                       <p className="font-bold text-gray-900 dark:text-white truncate text-sm">{user.email}</p>
                     </div>
 
@@ -194,7 +205,7 @@ export function Header() {
                         onClick={() => setMenuOpen(false)}
                         className="block px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 font-bold transition-colors border-b border-gray-100 dark:border-gray-700"
                       >
-                        🎛️ لوحة التحكم
+                        {t('dashboard')}
                       </Link>
                     )}
 
@@ -203,14 +214,14 @@ export function Header() {
                       onClick={() => setMenuOpen(false)}
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors"
                     >
-                      الملف الشخصي
+                      {t('profile')}
                     </Link>
 
                     <button
                       onClick={() => { logout(); setMenuOpen(false); }}
                       className="w-full text-right px-4 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-sm transition-colors"
                     >
-                      <FaSignOutAlt /> تسجيل الخروج
+                      <FaSignOutAlt /> {t('logout')}
                     </button>
                   </div>
                 )}
@@ -218,10 +229,10 @@ export function Header() {
             ) : (
               <div className="flex items-center gap-2">
                 <button onClick={() => login()} className="text-gray-700 dark:text-gray-300 hover:text-blue-600 font-medium text-sm hidden sm:block">
-                  دخول
+                  {t('login')}
                 </button>
                 <button onClick={() => register()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
-                  تسجيل
+                  {t('register')}
                 </button>
               </div>
             )}
