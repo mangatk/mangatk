@@ -17,6 +17,7 @@ import { Manga } from '@/types/manga';
 import { useStorage } from '@/hooks/useStorage';
 import { useAuth } from '@/context/AuthContext';
 import { FaPlay, FaHistory, FaTimesCircle } from 'react-icons/fa';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Filters {
   query?: string;
@@ -28,32 +29,18 @@ interface Filters {
   artist?: string;
 }
 
-// Category titles (keeping for UI)
-const categoryInfo = {
-  'best-webtoon': {
-    title: 'Best Webtoon',
-    description: 'أفضل المانغا والويبتون حسب التقييمات'
-  },
-  'golden-week': {
-    title: 'Golden Week',
-    description: 'مانغا الأسبوع الذهبي الأكثر شهرة'
-  },
-  'new-releases': {
-    title: 'New Releases',
-    description: 'أحدث الإصدارات والمانغا الجديدة'
-  },
-  'action-fantasy': {
-    title: 'Action & Fantasy',
-    description: 'أقوى مانغا الأكشن والخيال'
-  },
-  'romance-drama': {
-    title: 'Romance & Drama',
-    description: 'أجمل قصص الرومانسية والدراما'
-  }
+// Map category slug → translation keys
+const categoryKeys: Record<string, { titleKey: string; descKey: string }> = {
+  'best-webtoon':  { titleKey: 'catBestWebtoon',     descKey: 'catBestWebtoonDesc' },
+  'golden-week':   { titleKey: 'catGoldenWeek',      descKey: 'catGoldenWeekDesc' },
+  'new-releases':  { titleKey: 'catNewReleases',     descKey: 'catNewReleasesDesc' },
+  'action-fantasy':{ titleKey: 'catActionFantasy',   descKey: 'catActionFantasyDesc' },
+  'romance-drama': { titleKey: 'catRomanceDrama',    descKey: 'catRomanceDramaDesc' },
 };
 
 function HomeContent() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { history } = useStorage();
   const searchParams = useSearchParams();
 
@@ -151,9 +138,9 @@ function HomeContent() {
 
     // Set greeting
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting('صباح الخير ☀️');
-    else if (hour < 18) setGreeting('طاب مساؤك 🌤️');
-    else setGreeting('سهرة ممتعة 🌙');
+    if (hour < 12) setGreeting(t('greetingMorning'));
+    else if (hour < 18) setGreeting(t('greetingAfternoon'));
+    else setGreeting(t('greetingEvening'));
   }, []);
 
   // Load categorized manga separately to not block initial load
@@ -242,7 +229,7 @@ function HomeContent() {
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل المانجا...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loadingManga')}</p>
         </div>
       </div>
     );
@@ -264,7 +251,7 @@ function HomeContent() {
           <section className="py-8 bg-gray-50 dark:bg-gray-800/30 border-y border-gray-100 dark:border-gray-800">
             <div className="container mx-auto px-4">
               <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <FaHistory /> قراءاتك الأخيرة
+                <FaHistory /> {t('recentReading')}
               </h3>
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 {history.slice(1, 6).map((item, idx) => (
@@ -283,7 +270,7 @@ function HomeContent() {
                       </div>
                     </div>
                     <h4 className="font-bold text-gray-800 dark:text-white text-sm truncate">{item.mangaTitle}</h4>
-                    <p className="text-xs text-gray-500">تابع القراءة</p>
+                    <p className="text-xs text-gray-500">{t('continueReading')}</p>
                   </Link>
                 ))}
               </div>
@@ -301,15 +288,15 @@ function HomeContent() {
             <div className="container mx-auto px-4">
               <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <SectionTitle
-                  title={isFiltering ? 'جاري التصفية...' : `نتائج البحث (${filteredManga.length})`}
-                  description="المانجا التي تطابق معايير البحث الخاصة بك"
+                  title={isFiltering ? t('filtering') : `${t('searchResults')} (${filteredManga.length})`}
+                  description={t('searchResultsDesc')}
                 />
                 <button
                   onClick={clearFilters}
                   className="flex items-center gap-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-5 py-2.5 rounded-full font-bold hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors shadow-sm"
                 >
                   <FaTimesCircle className="text-lg" />
-                  إلغاء الفلتر والعودة
+                  {t('clearFilters')}
                 </button>
               </div>
               {isFiltering ? (
@@ -327,7 +314,7 @@ function HomeContent() {
             {/* Top Rated */}
             <section className="py-12 bg-white dark:bg-gray-900">
               <div className="container mx-auto px-4">
-                <SectionTitle title="الأعلى تقييماً 🔥" description="بناءً على تقييمات القراء" />
+                <SectionTitle title={t('topRated')} description={t('topRatedDesc')} />
                 <ComicGrid mangaList={allManga.slice(0, 5)} onLoadMore={() => { }} hasMore={false} limit={5} showHeader={false} />
               </div>
             </section>
@@ -348,10 +335,10 @@ function HomeContent() {
                 return (
                   <section key={cat.id} className={`py-12 ${bgClass}`}>
                     <div className="container mx-auto px-4">
-                      <SectionTitle 
-                        title={categoryInfo[cat.id as keyof typeof categoryInfo].title} 
-                        description={categoryInfo[cat.id as keyof typeof categoryInfo].description} 
-                        viewAllLink={`/category/${cat.id}`} 
+                    <SectionTitle
+                        title={t(categoryKeys[cat.id as keyof typeof categoryKeys]?.titleKey as any)}
+                        description={t(categoryKeys[cat.id as keyof typeof categoryKeys]?.descKey as any)}
+                        viewAllLink={`/category/${cat.id}`}
                       />
                       <ComicGrid 
                         mangaList={cat.data} 
@@ -368,7 +355,7 @@ function HomeContent() {
             {/* All Manga */}
             <section className="py-12 bg-white dark:bg-gray-900">
               <div className="container mx-auto px-4">
-                <SectionTitle title="جميع المانجا" description="استكشف مكتبتنا الكاملة" viewAllLink="/browse" />
+                <SectionTitle title={t('allManga')} description={t('allMangaDesc')} viewAllLink="/browse" />
                 <ComicGrid mangaList={allManga} onLoadMore={() => { }} hasMore={false} limit={12} showHeader={false} />
               </div>
             </section>
@@ -380,7 +367,7 @@ function HomeContent() {
             href="/browse"
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-4 rounded-xl font-bold text-lg transition-all hover:scale-105 shadow-xl hover:shadow-2xl flex items-center gap-3"
           >
-            <span>عرض قائمة المانجا الكاملة</span>
+            <span>{t('viewAllManga')}</span>
             <svg className="w-5 h-5 rtl:scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -399,7 +386,7 @@ export default function Home() {
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل المانجا...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     }>

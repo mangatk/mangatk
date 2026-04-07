@@ -256,8 +256,81 @@ class ChapterImage(models.Model):
 
 # ==================== USER SYSTEM & GAMIFICATION ====================
 
+# class User(AbstractUser):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     avatar_url = models.URLField(max_length=500, blank=True)
+#     bio = models.TextField(max_length=500, blank=True)
+#     equipped_title = models.CharField(max_length=100, blank=True, help_text="اللقب المجهز من الإنجازات")
+#     equipped_achievement = models.ForeignKey(
+#         'Achievement',
+#         on_delete=models.SET_NULL,
+#         null=True,
+#         blank=True,
+#         related_name='equipped_by_users',
+#         help_text="الإنجاز المجهز ليظهر فوق صورة الحساب"
+#     )
+    
+#     # Reading Stats
+#     total_reading_time = models.PositiveIntegerField(default=0)
+#     chapters_read = models.PositiveIntegerField(default=0)
+    
+#     # Points & Subscription
+#     # New users start with 100 points
+#     points = models.IntegerField(default=100, help_text="Currency for translations and rewards")
+#     subscription_plan = models.ForeignKey(
+#         SubscriptionPlan, 
+#         on_delete=models.SET_NULL, 
+#         null=True, 
+#         blank=True,
+#         related_name='users'
+#     )
+#     # Keeping is_premium for backward compatibility or simple checks
+#     is_premium = models.BooleanField(default=False) 
+    
+#     theme_preference = models.CharField(
+#         max_length=20, 
+#         default='auto', 
+#         choices=[('light', 'Light'), ('dark', 'Dark'), ('auto', 'Auto')]
+#     )
+    
+#     def __str__(self):
+#         return self.username
+        
+#     def add_points(self, amount, reason=''):
+#         """Add points to user with subscription multiplier"""
+#         multiplier = self.subscription_plan.point_multiplier if self.subscription_plan else 1.0
+#         final_amount = int(amount * multiplier)
+#         self.points += final_amount
+#         self.save()
+#         return final_amount
+    
+#     def deduct_points(self, amount, reason=''):
+#         """Deduct points from user. Returns True if successful, False if insufficient."""
+#         if self.points >= amount:
+#             self.points -= amount
+#             self.save()
+#             return True
+#         return False
+    
+#     def can_afford(self, amount):
+#         """Check if user has enough points"""
+#         return self.points >= amount
+
+#     # تمت الإضافة: خصائص (Properties) لحل أخطاء Admin التي تبحث عن هذه الحقول
+#     @property
+#     def achievement_count(self):
+#         return self.user_achievements.count()
+
+#     @property
+#     def bookmark_count(self):
+#         return self.bookmarks.count()
+
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # NEW: public display name shown in profile/comments instead of google/auth username
+    display_name = models.CharField(max_length=150, blank=True, db_index=True)
+
     avatar_url = models.URLField(max_length=500, blank=True)
     bio = models.TextField(max_length=500, blank=True)
     equipped_title = models.CharField(max_length=100, blank=True, help_text="اللقب المجهز من الإنجازات")
@@ -269,54 +342,57 @@ class User(AbstractUser):
         related_name='equipped_by_users',
         help_text="الإنجاز المجهز ليظهر فوق صورة الحساب"
     )
-    
-    # Reading Stats
+
     total_reading_time = models.PositiveIntegerField(default=0)
     chapters_read = models.PositiveIntegerField(default=0)
-    
-    # Points & Subscription
-    # New users start with 100 points
+
     points = models.IntegerField(default=100, help_text="Currency for translations and rewards")
     subscription_plan = models.ForeignKey(
-        SubscriptionPlan, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        SubscriptionPlan,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='users'
     )
-    # Keeping is_premium for backward compatibility or simple checks
-    is_premium = models.BooleanField(default=False) 
-    
+    is_premium = models.BooleanField(default=False)
+
     theme_preference = models.CharField(
-        max_length=20, 
-        default='auto', 
+        max_length=20,
+        default='auto',
         choices=[('light', 'Light'), ('dark', 'Dark'), ('auto', 'Auto')]
     )
-    
+
     def __str__(self):
+        return self.display_name or self.username
+
+    @property
+    def public_display_name(self):
+        if self.display_name and self.display_name.strip():
+            return self.display_name.strip()
+
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        if full_name:
+            return full_name
+
         return self.username
-        
+
     def add_points(self, amount, reason=''):
-        """Add points to user with subscription multiplier"""
         multiplier = self.subscription_plan.point_multiplier if self.subscription_plan else 1.0
         final_amount = int(amount * multiplier)
         self.points += final_amount
         self.save()
         return final_amount
-    
+
     def deduct_points(self, amount, reason=''):
-        """Deduct points from user. Returns True if successful, False if insufficient."""
         if self.points >= amount:
             self.points -= amount
             self.save()
             return True
         return False
-    
+
     def can_afford(self, amount):
-        """Check if user has enough points"""
         return self.points >= amount
 
-    # تمت الإضافة: خصائص (Properties) لحل أخطاء Admin التي تبحث عن هذه الحقول
     @property
     def achievement_count(self):
         return self.user_achievements.count()
@@ -324,7 +400,6 @@ class User(AbstractUser):
     @property
     def bookmark_count(self):
         return self.bookmarks.count()
-
 
 class UserBookmark(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

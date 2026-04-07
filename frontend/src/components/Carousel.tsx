@@ -4,12 +4,14 @@ import { FaChevronLeft, FaChevronRight, FaStar, FaLayerGroup } from 'react-icons
 import Link from 'next/link';
 import { ProxyImage } from '@/components/ProxyImage';
 import { Manga } from '@/types/manga';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface CarouselProps {
   mangaList?: Manga[];
 }
 
 export function Carousel({ mangaList = [] }: CarouselProps) {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState(0);
   const featured = mangaList.slice(0, 5);
 
@@ -55,7 +57,7 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
 
   return (
     <section
-      className="relative bg-gray-900 overflow-hidden mx-auto w-full max-w-[1080px] h-[240px] md:h-[300px] lg:h-[320px] rounded-2xl shadow-2xl mt-6 group select-none touch-pan-y"
+      className="relative bg-gray-900 overflow-hidden mx-auto w-full max-w-[1180px] h-[250px] md:h-[340px] lg:h-[430px] xl:h-[470px] rounded-2xl shadow-2xl mt-6 group select-none touch-pan-y"
       dir="ltr"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -89,10 +91,10 @@ export function Carousel({ mangaList = [] }: CarouselProps) {
                     <FaStar /> {manga.avgRating}
                   </span>
                   <span className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded backdrop-blur-sm">
-                    <FaLayerGroup /> {manga.chapterCount} فصل
+                    <FaLayerGroup /> {manga.chapterCount} {t('chapters')}
                   </span>
                   <span className={`px-2 py-1 rounded text-xs uppercase ${manga.status === 'ongoing' ? 'bg-green-600' : 'bg-blue-600'}`}>
-                    {manga.status === 'ongoing' ? 'مستمر' : 'مكتمل'}
+                    {manga.status === 'ongoing' ? t('ongoingShort') : t('completedShort')}
                   </span>
                 </div>
               </div>

@@ -54,8 +54,14 @@ function mapMangaData(item: any): Manga {
     imageUrl: item.cover_image_url || '/images/placeholder.jpg',
     chapterCount: item.chapter_count || 0,
     avgRating: parseFloat(item.avg_rating || '0'),
-    // التعامل مع التصنيفات سواء كانت كائنات أو نصوص
-    genres: item.genres ? (Array.isArray(item.genres) ? item.genres.map((g: any) => g.name || g) : []) : [],
+    // الأنواع: نحفظ الكائن كاملاً ليشمل name_ar للعرض العربي
+    genres: item.genres
+      ? (Array.isArray(item.genres)
+          ? item.genres.map((g: any) =>
+              typeof g === 'string' ? { name: g, name_ar: '' } : { name: g.name || g, name_ar: g.name_ar || '' }
+            )
+          : [])
+      : [],
     status: item.status,
     lastUpdated: item.last_updated,
     author: item.author || 'Unknown',
@@ -189,11 +195,14 @@ export async function getChapterDetails(id: string): Promise<ChapterData> {
 
 // ==================== Helper Data Endpoints ====================
 
-export async function getCategories(): Promise<string[]> {
+export async function getCategories(): Promise<{ slug: string; name: string; title_ar: string }[]> {
   const data = await fetchAPI<any>('/categories/');
   const results = extractResults(data);
-  // إرجاع الـ slug فقط
-  return results.map((cat: any) => cat.slug);
+  return results.map((cat: any) => ({
+    slug: cat.slug,
+    name: cat.name,
+    title_ar: cat.title_ar || '',
+  }));
 }
 
 export async function getGenres(): Promise<{ name: string; name_ar: string }[]> {

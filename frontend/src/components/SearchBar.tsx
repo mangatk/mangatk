@@ -5,30 +5,31 @@ import Link from 'next/link';
 import { getMangaList } from '@/services/api';
 import { Manga } from '@/types/manga';
 import { ProxyImage } from '@/components/ProxyImage';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
+  autoFocus?: boolean;
 }
 
-export function SearchBar({ onSearch }: SearchBarProps) {
+export function SearchBar({ onSearch, autoFocus }: SearchBarProps) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Manga[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // تأخير البحث لتجنب الضغط على السيرفر
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (query.length > 2) {
         setLoading(true);
         try {
-          // جلب النتائج من السيرفر
-          const response = await getMangaList(1, 5, { query: query });
-          setResults(response.results); // عرض أول 5 نتائج فقط
+          const response = await getMangaList(1, 5, { query });
+          setResults(response.results);
           setIsOpen(true);
         } catch (error) {
-          console.error("Search error:", error);
+          console.error('Search error:', error);
         } finally {
           setLoading(false);
         }
@@ -36,7 +37,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
         setResults([]);
         setIsOpen(false);
       }
-    }, 500); // انتظار 500ms بعد التوقف عن الكتابة
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
@@ -47,7 +48,6 @@ export function SearchBar({ onSearch }: SearchBarProps) {
     if (onSearch) onSearch(val);
   };
 
-  // إغلاق القائمة عند النقر خارجها
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -63,12 +63,12 @@ export function SearchBar({ onSearch }: SearchBarProps) {
       <div className="relative">
         <input
           type="text"
-          placeholder="ابحث عن مانجا..."
+          placeholder={t('searchPlaceholder')}
           value={query}
           onChange={handleSearchChange}
+          autoFocus={autoFocus}
           className="w-full px-4 py-2.5 pl-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
         />
-        {/* Loading Spinner */}
         {loading && (
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
             <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
@@ -102,7 +102,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
               ))}
             </ul>
           ) : (
-            !loading && <div className="px-4 py-6 text-center text-gray-500 text-sm">لا توجد نتائج</div>
+            !loading && <div className="px-4 py-6 text-center text-gray-500 text-sm">{t('searchNoResults')}</div>
           )}
         </div>
       )}

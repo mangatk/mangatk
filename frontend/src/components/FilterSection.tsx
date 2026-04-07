@@ -141,7 +141,8 @@
 import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar';
 import { FaFilter, FaSortAmountDown, FaLayerGroup } from 'react-icons/fa';
-import { getGenres } from '@/services/api'; // استيراد دالة جلب الأنواع
+import { getGenres } from '@/services/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface FilterData {
   status?: string;
@@ -159,6 +160,7 @@ interface FilterSectionProps {
 }
 
 export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSectionProps) {
+  const { t, tDynamic } = useLanguage();
   const [status, setStatus] = useState<string>('All');
   const [type, setType] = useState<string>('All');
   const [order, setOrder] = useState<string>('Name');
@@ -206,22 +208,22 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
   };
 
   const statuses = [
-    { value: 'All', label: 'الكل' },
-    { value: 'Completed', label: 'مكتملة' },
-    { value: 'Ongoing', label: 'مستمرة' },
+    { value: 'All',       label: t('all') },
+    { value: 'Completed', label: t('completed') },
+    { value: 'Ongoing',   label: t('ongoing') },
   ];
   const storyTypes = [
-    { value: 'All', label: 'الكل' },
-    { value: 'Manga', label: 'مانجا' },
-    { value: 'Manhwa', label: 'مانهوا' },
-    { value: 'Manhua', label: 'مانهوا (صيني)' },
-    { value: 'Comic', label: 'كوميك' },
+    { value: 'All',     label: t('all') },
+    { value: 'Manga',   label: t('manga') },
+    { value: 'Manhwa',  label: t('manhwa') },
+    { value: 'Manhua',  label: t('manhua') },
+    { value: 'Comic',   label: t('comic') },
   ];
   const orders = [
-    { value: 'Name', label: 'الاسم' },
-    { value: 'Latest Chapter', label: 'أحدث فصل' },
-    { value: 'Most Popular', label: 'الأكثر شهرة' },
-    { value: 'Rating', label: 'التقييم' },
+    { value: 'Name',           label: t('sortName') },
+    { value: 'Latest Chapter', label: t('sortLatest') },
+    { value: 'Most Popular',   label: t('sortPopular') },
+    { value: 'Rating',         label: t('sortRating') },
   ];
 
   return (
@@ -267,7 +269,7 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                 className={`w-full sm:w-auto px-4 py-2.5 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium ${showCategoryDropdown || selectedGenres.length > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
               >
                 <FaLayerGroup />
-                <span>الأنواع</span>
+                <span>{t('genresBtn')}</span>
                 {selectedGenres.length > 0 && <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 rounded-full">{selectedGenres.length}</span>}
               </button>
 
@@ -284,9 +286,9 @@ export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSe
                             onChange={() => handleCategoryToggle(g.name)}
                             className="w-4 h-4 rounded border-gray-300 text-blue-600 mr-3"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-200">{g.name_ar || g.name}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-200">{tDynamic(g.name, g.name_ar)}</span>
                         </label>
-                      )) : <div className="p-2 text-center text-sm text-gray-500">جاري التحميل...</div>}
+                      )) : <div className="p-2 text-center text-sm text-gray-500">{t('genresLoading')}</div>}
                     </div>
                   </div>
                 </>

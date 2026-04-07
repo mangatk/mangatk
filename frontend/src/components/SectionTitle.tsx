@@ -1,5 +1,8 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/context/LanguageContext';
+
 interface SectionTitleProps {
   title: string;
   description?: string;
@@ -7,6 +10,8 @@ interface SectionTitleProps {
 }
 
 export function SectionTitle({ title, description, viewAllLink }: SectionTitleProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex justify-between items-end mb-8">
       <div>
@@ -20,15 +25,15 @@ export function SectionTitle({ title, description, viewAllLink }: SectionTitlePr
         )}
       </div>
       {viewAllLink && (
-        <Link 
+        <Link
           href={viewAllLink}
           className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl text-sm font-medium group"
         >
-          <span>عرض الكل</span>
-          <svg 
-            className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-x-1" 
-            fill="none" 
-            stroke="currentColor" 
+          <span>{t('viewAll')}</span>
+          <svg
+            className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-x-1"
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

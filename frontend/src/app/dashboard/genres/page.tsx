@@ -8,9 +8,16 @@ import { confirmAction } from '@/utils/confirmAction';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+// interface Genre {
+//     id: string;
+//     name: string;
+//     slug: string;
+// }
+
 interface Genre {
     id: string;
     name: string;
+    name_ar: string;
     slug: string;
 }
 
@@ -100,6 +107,9 @@ export default function GenresPage() {
                             </div>
                             <div>
                                 <h3 className="text-white font-medium">{genre.name}</h3>
+                                {genre.name_ar && (
+                                    <p className="text-gray-300 text-sm">{genre.name_ar}</p>
+                                )}
                                 <p className="text-gray-400 text-sm">{genre.slug}</p>
                             </div>
                         </div>
@@ -138,8 +148,92 @@ export default function GenresPage() {
     );
 }
 
-function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClose: () => void; onSuccess: () => void }) {
+// function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClose: () => void; onSuccess: () => void }) {
+//     const [name, setName] = useState(genre?.name || '');
+//     const [loading, setLoading] = useState(false);
+
+//     async function handleSubmit(e: React.FormEvent) {
+//         e.preventDefault();
+//         setLoading(true);
+
+//         try {
+//             const token = localStorage.getItem('manga_token');
+//             const url = genre
+//                 ? `${API_URL}/genres/${genre.slug}/`
+//                 : `${API_URL}/genres/`;
+
+//             const res = await fetch(url, {
+//                 method: genre ? 'PUT' : 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${token}`
+//                 },
+//                 body: JSON.stringify({ name }),
+//             });
+
+//             if (!res.ok) {
+//                 throw new Error('فشل الحفظ');
+//             }
+
+//             onSuccess();
+//         } catch (error: any) {
+//             console.error('Error saving genre:', error);
+//             toast.error(error.message || 'حدث خطأ أثناء الحفظ');
+//         } finally {
+//             setLoading(false);
+//         }
+//     }
+
+//     return (
+//         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+//             <div className="bg-gray-800 rounded-xl w-full max-w-md p-6">
+//                 <h2 className="text-xl font-bold text-white mb-4">
+//                     {genre ? 'تعديل التصنيف' : 'إضافة تصنيف جديد'}
+//                 </h2>
+
+//                 <form onSubmit={handleSubmit}>
+//                     <input
+//                         type="text"
+//                         required
+//                         value={name}
+//                         onChange={(e) => setName(e.target.value)}
+//                         placeholder="اسم التصنيف"
+//                         className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white mb-4 focus:outline-none focus:border-blue-500"
+//                     />
+
+//                     <div className="flex gap-3">
+//                         <button
+//                             type="submit"
+//                             disabled={loading}
+//                             className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+//                         >
+//                             {loading ? 'جاري الحفظ...' : 'حفظ'}
+//                         </button>
+//                         <button
+//                             type="button"
+//                             onClick={onClose}
+//                             className="px-6 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+//                         >
+//                             إلغاء
+//                         </button>
+//                     </div>
+//                 </form>
+//             </div>
+//         </div>
+//     );
+// }
+
+function GenreModal({
+    genre,
+    onClose,
+    onSuccess
+}: {
+    genre: Genre | null;
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
     const [name, setName] = useState(genre?.name || '');
+    const [nameAr, setNameAr] = useState(genre?.name_ar || '');
     const [loading, setLoading] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -158,11 +252,15 @@ function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClos
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify({
+                    name: name.trim(),
+                    name_ar: nameAr.trim(),
+                }),
             });
 
             if (!res.ok) {
-                throw new Error('فشل الحفظ');
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.detail || data.error || 'فشل الحفظ');
             }
 
             onSuccess();
@@ -181,15 +279,29 @@ function GenreModal({ genre, onClose, onSuccess }: { genre: Genre | null; onClos
                     {genre ? 'تعديل التصنيف' : 'إضافة تصنيف جديد'}
                 </h2>
 
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="اسم التصنيف"
-                        className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white mb-4 focus:outline-none focus:border-blue-500"
-                    />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm text-gray-300 mb-2">الاسم الإنجليزي</label>
+                        <input
+                            type="text"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Action"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm text-gray-300 mb-2">الاسم العربي</label>
+                        <input
+                            type="text"
+                            value={nameAr}
+                            onChange={(e) => setNameAr(e.target.value)}
+                            placeholder="أكشن"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500"
+                        />
+                    </div>
 
                     <div className="flex gap-3">
                         <button

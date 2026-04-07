@@ -14,6 +14,7 @@ import {
   FaBookOpen, FaStar, FaUser, FaClock, FaLayerGroup,
   FaSearch, FaSortAmountDown, FaSortAmountUp, FaHeart, FaRegHeart
 } from 'react-icons/fa';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface MangaWithChapters extends Manga {
   chapters?: Array<{
@@ -30,6 +31,7 @@ export default function MangaDetail() {
 
   const { toggleBookmark, isBookmarked } = useStorage();
   const { user, getAuthHeaders } = useAuth();
+  const { t, tDynamic } = useLanguage();
 
   const [manga, setManga] = useState<MangaWithChapters | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,7 +163,7 @@ export default function MangaDetail() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل التفاصيل...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('loadingDetails')}</p>
         </div>
       </div>
     );
@@ -211,7 +213,7 @@ export default function MangaDetail() {
                   className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-yellow-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
                 >
                   <FaBookOpen className="text-lg" />
-                  <span>اكمل القراءة - الفصل {lastReadChapter.number}</span>
+                  <span>{t('continueReadingCh')} {lastReadChapter.number}</span>
                 </Link>
               )}
 
@@ -224,7 +226,7 @@ export default function MangaDetail() {
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
               >
                 <FaBookOpen className="text-lg" />
-                <span>ابدأ القراءة</span>
+                <span>{t('startReading')}</span>
               </Link>
 
               <button
@@ -235,7 +237,7 @@ export default function MangaDetail() {
                   }`}
               >
                 {isFav ? <FaHeart className="text-xl animate-pulse" /> : <FaRegHeart className="text-xl" />}
-                <span>{isFav ? 'تمت الإضافة للمفضلة' : 'أضف للمفضلة'}</span>
+                <span>{isFav ? t('removeFav') : t('addFav')}</span>
               </button>
             </div>
           </div>
@@ -289,20 +291,24 @@ export default function MangaDetail() {
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">
-              {manga.genres.map(genre => (
-                <Link
-                  key={genre}
-                  href={`/browse?genre=${encodeURIComponent(genre)}`}
-                  className="px-3 py-1 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded-lg text-sm transition-colors cursor-pointer border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
-                >
-                  {genre}
-                </Link>
-              ))}
+              {manga.genres.map((genre: any) => {
+                const genreName = typeof genre === 'string' ? genre : genre.name;
+                const genreNameAr = typeof genre === 'string' ? '' : (genre.name_ar || '');
+                return (
+                  <Link
+                    key={genreName}
+                    href={`/browse?genre=${encodeURIComponent(genreName)}`}
+                    className="px-3 py-1 bg-gray-200/50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded-lg text-sm transition-colors cursor-pointer border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                  >
+                    {tDynamic(genreName, genreNameAr)}
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700 mb-8 text-right">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
-                القصة
+                {t('story')}
               </h3>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
                 {manga.description}
@@ -314,14 +320,14 @@ export default function MangaDetail() {
 
               <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FaClock className="text-blue-500" /> الفصول
+                  <FaClock className="text-blue-500" /> {t('chaptersSection')}
                 </h3>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-56">
                     <input
                       type="text"
-                      placeholder="ابحث عن رقم..."
+                      placeholder={t('searchChapter')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-gray-900 dark:text-white"
@@ -387,7 +393,7 @@ export default function MangaDetail() {
                           ? 'text-gray-500 dark:text-gray-500'
                           : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400'
                           }`}>
-                          {chapter.title || `الفصل ${chapter.number}`}
+                    {chapter.title || `${t('chapter')} ${chapter.number}`}
                         </span>
                       </div>
                       <span className="text-xs text-gray-400 font-mono hidden sm:block">

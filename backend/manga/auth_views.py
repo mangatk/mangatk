@@ -148,30 +148,88 @@ def refresh_token_view(request):
         return Response({'error': 'Token غير صالح'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+# @api_view(['GET', 'PATCH'])
+# @permission_classes([IsAuthenticated])
+# def profile_view(request):
+#     """
+#     Get or update current user profile
+#     GET /api/auth/profile/
+#     PATCH /api/auth/profile/  - Update equipped_title
+#     """
+#     user = request.user
+    
+#     if request.method == 'PATCH':
+#         equipped_title = request.data.get('equipped_title')
+#         if equipped_title is not None:
+#             user.equipped_title = equipped_title
+        
+#         name = request.data.get('name')
+#         if name and not user.first_name:
+#             user.first_name = name
+            
+#         user.save()
+    
+#     return Response({
+#         'id': str(user.id),
+#         'username': user.username,
+#         'first_name': user.first_name,
+#         'email': user.email,
+#         'is_staff': user.is_staff,
+#         'is_superuser': user.is_superuser,
+#         'avatar_url': user.avatar_url or '',
+#         'bio': user.bio or '',
+#         'points': user.points,
+#         'chapters_read': user.chapters_read,
+#         'total_reading_time': user.total_reading_time,
+#         'equipped_title': user.equipped_title or '',
+#         'equipped_achievement_icon': user.equipped_achievement.icon_url if user.equipped_achievement else None,
+#     })
+
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def profile_view(request):
     """
     Get or update current user profile
     GET /api/auth/profile/
-    PATCH /api/auth/profile/  - Update equipped_title
+    PATCH /api/auth/profile/
     """
     user = request.user
-    
+
     if request.method == 'PATCH':
         equipped_title = request.data.get('equipped_title')
         if equipped_title is not None:
             user.equipped_title = equipped_title
-        
-        name = request.data.get('name')
-        if name and not user.first_name:
-            user.first_name = name
-            
+
+        display_name = request.data.get('display_name')
+        if display_name is not None:
+            display_name = str(display_name).strip()
+            if len(display_name) < 2:
+                return Response(
+                    {'error': 'الاسم الظاهر يجب أن يكون حرفين على الأقل'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if len(display_name) > 150:
+                return Response(
+                    {'error': 'الاسم الظاهر طويل جداً'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.display_name = display_name
+
+        bio = request.data.get('bio')
+        if bio is not None:
+            user.bio = str(bio).strip()
+
+        avatar_url = request.data.get('avatar_url')
+        if avatar_url is not None:
+            user.avatar_url = str(avatar_url).strip()
+
         user.save()
-    
+
     return Response({
         'id': str(user.id),
         'username': user.username,
+        'display_name': user.display_name or '',
+        'public_display_name': user.public_display_name,
         'first_name': user.first_name,
         'email': user.email,
         'is_staff': user.is_staff,

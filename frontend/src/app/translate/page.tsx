@@ -5,6 +5,7 @@ import { FaUpload, FaDownload, FaRobot, FaSpinner, FaCheckCircle, FaExclamationT
 import ChapterPreview, { ViewMode } from '@/components/ChapterPreview';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
+import { useLanguage } from '@/context/LanguageContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -27,6 +28,7 @@ interface TranslationJob {
 
 export default function TranslatePage() {
     const { user, isAuthenticated, token } = useAuth();
+    const { t } = useLanguage();
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [currentJob, setCurrentJob] = useState<TranslationJob | null>(null);
@@ -83,7 +85,7 @@ export default function TranslatePage() {
             const fileExt = selectedFile.name.slice(selectedFile.name.lastIndexOf('.')).toLowerCase();
 
             if (!validTypes.includes(fileExt)) {
-                setError('يرجى اختيار ملف ZIP أو CBZ فقط');
+                setError(t('errFileType'));
                 return;
             }
 
@@ -94,18 +96,18 @@ export default function TranslatePage() {
 
     const handleUpload = async () => {
         if (!user) {
-            setError('يجب تسجيل الدخول لاستخدام المترجم');
+            setError(t('errLoginRequired'));
             return;
         }
 
         if (!file) {
-            setError('يرجى اختيار ملف');
+            setError(t('errSelectFile'));
             return;
         }
 
         // Validate language selection
         if (!sourceLanguage) {
-            setError('يرجى اختيار لغة المصدر قبل الترجمة');
+            setError(t('errSelectLang'));
             return;
         }
 
@@ -143,11 +145,11 @@ export default function TranslatePage() {
                 const fileInput = document.getElementById('file-input') as HTMLInputElement;
                 if (fileInput) fileInput.value = '';
             } else {
-                setError(data.error || 'حدث خطأ أثناء رفع الملف');
+                setError(data.error || t('errUpload'));
                 setPolling(false);
             }
         } catch (error) {
-            setError('فشل الاتصال بالخادم');
+            setError(t('errConnect'));
             setPolling(false);
         } finally {
             setUploading(false);
@@ -182,7 +184,7 @@ export default function TranslatePage() {
                     await fetchPreview(jobId);
                 } else if (data.status === 'failed') {
                     setPolling(false);
-                    setError(data.error_message || 'فشلت عملية الترجمة');
+                    setError(data.error_message || t('errConnect'));
                 }
             }
         } catch (error) {
@@ -254,12 +256,12 @@ export default function TranslatePage() {
         if (!currentJob) return '';
 
         const statusMap: Record<string, string> = {
-            'uploading': 'جاري الرفع...',
-            'extracting': 'جاري فك الضغط...',
-            'translating': 'جاري الترجمة...',
-            'creating_cbz': 'جاري إنشاء الملف...',
-            'completed': 'اكتمل!',
-            'failed': 'فشل'
+            'uploading':   t('statusUploading'),
+            'extracting':  t('statusExtracting'),
+            'translating': t('statusTranslating'),
+            'creating_cbz':t('statusCreating'),
+            'completed':   t('statusCompleted'),
+            'failed':      t('statusFailed'),
         };
 
         return statusMap[currentJob.status] || currentJob.status;
@@ -291,13 +293,13 @@ export default function TranslatePage() {
                         <FaRobot className="text-white" />
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">
-                        ترجمة المانجا{' '}
+                        {t('translateH1a')}{' '}
                         <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                            بالذكاء الاصطناعي
+                            {t('translateH1b')}
                         </span>
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 text-lg mb-6 max-w-xl mx-auto">
-                        ارفع فصل من المانجا وسنترجمه تلقائياً إلى العربية باستخدام أحدث تقنيات الذكاء الاصطناعي
+                        {t('translateDesc')}
                     </p>
 
                     {/* Points Badge */}
@@ -306,13 +308,13 @@ export default function TranslatePage() {
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl">🪙</span>
                                 <span className="text-yellow-600 dark:text-yellow-400 font-black text-xl">{userPoints}</span>
-                                <span className="text-gray-500 dark:text-gray-400 font-medium">نقطة</span>
+                                <span className="text-gray-500 dark:text-gray-400 font-medium">{t('pointsUnit')}</span>
                             </div>
                             <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
                             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                                <span>التكلفة:</span>
+                                <span>{t('cost')}</span>
                                 <span className="font-bold text-purple-600 dark:text-purple-400">{requiredPoints}</span>
-                                <span>نقطة</span>
+                                <span>{t('pointsUnit')}</span>
                             </div>
                         </div>
                     )}
@@ -329,18 +331,18 @@ export default function TranslatePage() {
                         <div className="mb-8 p-5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40">
                             <h3 className="text-gray-800 dark:text-white font-bold text-base mb-1 flex items-center gap-2">
                                 <span className="text-xl">🌐</span>
-                                اختيار لغة المصدر
-                                <span className="text-red-500 text-xs font-black bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">ضروري</span>
+                                {t('selectSourceLang')}
+                                <span className="text-red-500 text-xs font-black bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">{t('required')}</span>
                             </h3>
                             <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
-                                اختر اللغة الأصلية للمانجا للحصول على أفضل نتائج
+                                {t('selectSourceDesc')}
                             </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Source Language */}
                                 <div>
                                     <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">
-                                        من (لغة المصدر) *
+                                        {t('fromLang')} *
                                     </label>
                                     <select
                                         value={sourceLanguage}
@@ -348,23 +350,23 @@ export default function TranslatePage() {
                                         className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
                                         required
                                     >
-                                        <option value="">اختر لغة المصدر</option>
-                                        <option value="chinese">🇨🇳 صيني</option>
-                                        <option value="japanese">🇯🇵 ياباني</option>
-                                        <option value="korean">🇰🇷 كوري</option>
-                                        <option value="english">🇬🇧 إنجليزي</option>
+                                        <option value="">{t('selectLangOption')}</option>
+                                        <option value="chinese">🇨🇳 {t('chinese')}</option>
+                                        <option value="japanese">🇯🇵 {t('japanese')}</option>
+                                        <option value="korean">🇰🇷 {t('korean')}</option>
+                                        <option value="english">🇬🇧 {t('english')}</option>
                                     </select>
                                 </div>
 
                                 {/* Target Language (Fixed) */}
                                 <div>
                                     <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">
-                                        إلى (لغة الهدف)
+                                        {t('toLang')}
                                     </label>
                                     <div className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-500 dark:text-gray-400 flex items-center gap-3 shadow-sm">
                                         <span className="text-2xl">🇸🇦</span>
-                                        <span className="font-medium">عربي</span>
-                                        <span className="mr-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">ثابت</span>
+                                        <span className="font-medium">{t('arabic')}</span>
+                                        <span className="mr-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">{t('fixed')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -403,9 +405,9 @@ export default function TranslatePage() {
                                     </div>
                                     <div className="text-center">
                                         <p className="font-bold text-gray-700 dark:text-gray-300 text-sm">
-                                            اسحب الملف هنا <span className="text-blue-500 dark:text-blue-400">أو انقر للاختيار</span>
+                                            {t('dragFile')} <span className="text-blue-500 dark:text-blue-400">{t('orClick')}</span>
                                         </p>
-                                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">يدعم: ZIP, CBZ</p>
+                                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t('supports')} ZIP, CBZ</p>
                                     </div>
                                 </div>
                             )}
@@ -420,12 +422,12 @@ export default function TranslatePage() {
                             {uploading ? (
                                 <>
                                     <FaSpinner className="animate-spin" />
-                                    جاري الرفع...
+                                    {t('statusUploading')}
                                 </>
                             ) : (
                                 <>
                                     <FaRobot />
-                                    رفع وترجمة
+                                    {t('uploadAndTranslate')}
                                 </>
                             )}
                         </button>
@@ -446,13 +448,13 @@ export default function TranslatePage() {
 
                             <h2 className="text-2xl font-black text-gray-900 dark:text-white">{getStatusDisplay()}</h2>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                {currentJob.translated_pages} من {currentJob.total_pages} صفحة تمت ترجمتها
+                                {currentJob.translated_pages} / {currentJob.total_pages}  {t('pagesTranslatedOk')}
                             </p>
 
                             {/* Progress Bar */}
                             <div className="w-full">
                                 <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
-                                    <span>التقدم</span>
+                                    <span>{t('progress')}</span>
                                     <span>{getProgressPercentage()}%</span>
                                 </div>
                                 <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
@@ -477,8 +479,8 @@ export default function TranslatePage() {
                                     <FaCheckCircle className="text-green-500 text-lg" />
                                 </div>
                                 <div>
-                                    <h2 className="text-gray-900 dark:text-white font-black text-lg">اكتملت الترجمة!</h2>
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm">{currentJob.total_pages} صفحة تم ترجمتها بنجاح</p>
+                                    <h2 className="text-gray-900 dark:text-white font-black text-lg">{t('translationDone')}</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">{currentJob.total_pages} {t('pagesTranslatedOk')}</p>
                                 </div>
                             </div>
 
@@ -495,13 +497,13 @@ export default function TranslatePage() {
                                     className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white py-4 rounded-2xl font-bold text-base transition-all shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-3"
                                 >
                                     <FaDownload />
-                                    تنزيل ملف CBZ
+                                    {t('downloadCBZ')}
                                 </button>
                                 <button
                                     onClick={handleReset}
                                     className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white py-4 rounded-2xl font-bold text-base transition-all border border-gray-200 dark:border-gray-600"
                                 >
-                                    ترجمة فصل جديد
+                                    {t('translateNew')}
                                 </button>
                             </div>
                         </div>
@@ -515,15 +517,15 @@ export default function TranslatePage() {
                             <FaExclamationTriangle className="text-red-500 text-lg" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-red-600 dark:text-red-400 font-bold text-base mb-1">حدث خطأ</h3>
+                            <h3 className="text-red-600 dark:text-red-400 font-bold text-base mb-1">{t('errorOccurred')}</h3>
                             <p className="text-red-500 dark:text-red-300 text-sm">
-                                {error || currentJob?.error_message || 'حدث خطأ غير متوقع'}
+                                {error || currentJob?.error_message || t('unexpectedError')}
                             </p>
                             <button
                                 onClick={handleReset}
                                 className="mt-4 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
                             >
-                                إعادة المحاولة
+                                {t('retry')}
                             </button>
                         </div>
                     </div>

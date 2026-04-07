@@ -395,34 +395,113 @@ class RatingSerializer(serializers.ModelSerializer):
         }
 
 
+# class CommentSerializer(serializers.ModelSerializer):
+#     """Serializer for comments on manga/chapters"""
+#     user_name = serializers.SerializerMethodField()
+#     user_avatar = serializers.SerializerMethodField()
+#     user_equipped_achievement_icon = serializers.SerializerMethodField()
+#     replies = serializers.SerializerMethodField()
+    
+#     # Nested objects for dashboard display
+#     user = serializers.SerializerMethodField()
+#     manga = serializers.SerializerMethodField()
+#     chapter = serializers.SerializerMethodField()
+    
+#     # For create operation - accept IDs
+#     manga_id = serializers.PrimaryKeyRelatedField(
+#         queryset=Manga.objects.all(), 
+#         required=False, 
+#         allow_null=True,
+#         write_only=True,
+#         source='manga'
+#     )
+#     chapter_id = serializers.PrimaryKeyRelatedField(
+#         queryset=Chapter.objects.all(), 
+#         required=False, 
+#         allow_null=True,
+#         write_only=True,
+#         source='chapter'
+#     )
+    
+#     class Meta:
+#         model = Comment
+#         fields = [
+#             'id', 'comment_type', 'manga', 'chapter', 'manga_id', 'chapter_id',
+#             'content', 'parent', 'likes_count', 'user', 'user_name', 'user_avatar',
+#             'user_equipped_achievement_icon', 'created_at', 'is_edited', 'is_deleted', 'replies'
+#         ]
+#         read_only_fields = ['id', 'likes_count', 'created_at', 'is_edited', 'comment_type']
+    
+#     def get_user(self, obj):
+#         return {
+#             'id': str(obj.user.id),
+#             'username': obj.user.username
+#         }
+        
+#     def get_user_name(self, obj):
+#         name = obj.user.first_name
+#         if obj.user.last_name:
+#             name = f"{name} {obj.user.last_name}".strip()
+#         return name if name else obj.user.username
+
+#     def get_user_avatar(self, obj):
+#         return getattr(obj.user, 'avatar_url', getattr(obj.user, 'picture', None))
+        
+#     def get_user_equipped_achievement_icon(self, obj):
+#         if getattr(obj.user, 'equipped_achievement', None):
+#             return obj.user.equipped_achievement.icon_url
+#         return None
+    
+#     def get_manga(self, obj):
+#         # Try direct manga, or get from chapter
+#         manga = obj.manga or (obj.chapter.manga if obj.chapter else None)
+#         if manga:
+#             return {
+#                 'id': str(manga.id),
+#                 'title': manga.title
+#             }
+#         return None
+    
+#     def get_chapter(self, obj):
+#         if obj.chapter:
+#             return {
+#                 'id': str(obj.chapter.id),
+#                 'number': obj.chapter.number,
+#                 'manga_title': obj.chapter.manga.title if obj.chapter.manga else None
+#             }
+#         return None
+    
+#     def get_replies(self, obj):
+#         if obj.replies.exists():
+#             return CommentSerializer(obj.replies.filter(is_deleted=False), many=True).data
+#         return []
+
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer for comments on manga/chapters"""
     user_name = serializers.SerializerMethodField()
     user_avatar = serializers.SerializerMethodField()
     user_equipped_achievement_icon = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
-    
-    # Nested objects for dashboard display
+
     user = serializers.SerializerMethodField()
     manga = serializers.SerializerMethodField()
     chapter = serializers.SerializerMethodField()
-    
-    # For create operation - accept IDs
+
     manga_id = serializers.PrimaryKeyRelatedField(
-        queryset=Manga.objects.all(), 
-        required=False, 
+        queryset=Manga.objects.all(),
+        required=False,
         allow_null=True,
         write_only=True,
         source='manga'
     )
     chapter_id = serializers.PrimaryKeyRelatedField(
-        queryset=Chapter.objects.all(), 
-        required=False, 
+        queryset=Chapter.objects.all(),
+        required=False,
         allow_null=True,
         write_only=True,
         source='chapter'
     )
-    
+
     class Meta:
         model = Comment
         fields = [
@@ -431,29 +510,25 @@ class CommentSerializer(serializers.ModelSerializer):
             'user_equipped_achievement_icon', 'created_at', 'is_edited', 'is_deleted', 'replies'
         ]
         read_only_fields = ['id', 'likes_count', 'created_at', 'is_edited', 'comment_type']
-    
+
     def get_user(self, obj):
         return {
             'id': str(obj.user.id),
-            'username': obj.user.username
+            'display_name': obj.user.public_display_name,
         }
-        
+
     def get_user_name(self, obj):
-        name = obj.user.first_name
-        if obj.user.last_name:
-            name = f"{name} {obj.user.last_name}".strip()
-        return name if name else obj.user.username
+        return obj.user.public_display_name
 
     def get_user_avatar(self, obj):
         return getattr(obj.user, 'avatar_url', getattr(obj.user, 'picture', None))
-        
+
     def get_user_equipped_achievement_icon(self, obj):
         if getattr(obj.user, 'equipped_achievement', None):
             return obj.user.equipped_achievement.icon_url
         return None
-    
+
     def get_manga(self, obj):
-        # Try direct manga, or get from chapter
         manga = obj.manga or (obj.chapter.manga if obj.chapter else None)
         if manga:
             return {
@@ -461,7 +536,7 @@ class CommentSerializer(serializers.ModelSerializer):
                 'title': manga.title
             }
         return None
-    
+
     def get_chapter(self, obj):
         if obj.chapter:
             return {
@@ -470,12 +545,11 @@ class CommentSerializer(serializers.ModelSerializer):
                 'manga_title': obj.chapter.manga.title if obj.chapter.manga else None
             }
         return None
-    
+
     def get_replies(self, obj):
-        if obj.replies.exists():
+        if hasattr(obj, 'replies'):
             return CommentSerializer(obj.replies.filter(is_deleted=False), many=True).data
         return []
-
 
 class CommentLikeSerializer(serializers.ModelSerializer):
     """Serializer for comment likes"""

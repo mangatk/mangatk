@@ -38,7 +38,7 @@ function BrowseContent() {
 
    useEffect(() => {
       loadManga(true);
-   // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [filters]);
 
    const loadManga = async (reset: boolean = false) => {
@@ -174,13 +174,13 @@ function BrowseContent() {
 }
 
 export default function BrowsePage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
-      </div>
-    }>
-      <BrowseContent />
-    </Suspense>
-  );
+   return (
+      <Suspense fallback={
+         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+         </div>
+      }>
+         <BrowseContent />
+      </Suspense>
+   );
 }

@@ -1,46 +1,47 @@
+'use client';
 import Link from 'next/link';
-import { FaInstagram } from 'react-icons/fa'; // Assuming react-icons is installed, fallback if not
+import { useLanguage } from '@/context/LanguageContext';
 
 export function Footer() {
+  const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
-  
-  // Simplified Arabic structure with correct routing links
+
   const footerSections = [
     {
-      title: 'تصفح المانجا',
+      titleKey: 'footerBrowse',
       links: [
-        { label: 'قائمة المانجا', href: '/browse' },
-        { label: 'أحدث الإضافات', href: '/latest' },
-        { label: 'الأكثر شهرة', href: '/popular' }
+        { labelKey: 'footerBrowseList', href: '/browse' },
+        { labelKey: 'footerLatest',     href: '/browse?sort=latest' },
+        { labelKey: 'footerPopular',    href: '/browse?sort=views' },
       ]
     },
     {
-      title: 'الدعم والمساعدة',
+      titleKey: 'footerSupport',
       links: [
-        { label: 'تواصل معنا', href: '/contact' },
-        { label: 'سياسة الخصوصية', href: '/privacy' },
-        { label: 'شروط الخدمة', href: '/terms' }
+        { labelKey: 'footerContact', href: '/contact' },
+        { labelKey: 'footerPrivacy', href: '/privacy' },
+        { labelKey: 'footerTerms',   href: '/terms' },
       ]
     }
   ];
 
   return (
-    <footer className="bg-gray-900 text-white py-6" data-aos="fade-up" dir="rtl">
+    <footer className="bg-gray-900 text-white py-6" dir="rtl">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex flex-col md:flex-row justify-center items-center md:items-start gap-12 md:gap-32 mb-8 text-center">
-          {footerSections.map((section, index) => (
-            <div key={section.title} data-aos="fade-up" data-aos-delay={index * 100}>
+          {footerSections.map((section) => (
+            <div key={section.titleKey}>
               <h3 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2 inline-block shadow-sm px-4">
-                {section.title}
+                {t(section.titleKey)}
               </h3>
               <ul className="space-y-3">
                 {section.links.map(link => (
-                  <li key={link.label}>
-                    <Link 
+                  <li key={link.labelKey}>
+                    <Link
                       href={link.href}
                       className="text-gray-400 hover:text-white transition-colors block px-4 py-1 rounded-md hover:bg-gray-800"
                     >
-                      {link.label}
+                      {t(link.labelKey)}
                     </Link>
                   </li>
                 ))}
@@ -55,30 +56,18 @@ export function Footer() {
               <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-indigo-500 to-purple-500">
                 MangaTK
               </h2>
-              <p className="text-gray-400 mt-2 max-w-sm mx-auto">
-                مرحبا بكم الى موقعنا نتمنى لكم تجربة مشاهدة وترجمة ممتعتين.
-              </p>
+              <p className="text-gray-400 mt-2 max-w-sm mx-auto">{t('footerSlogan')}</p>
             </div>
-            
+
             <div className="flex items-center justify-center">
-              <a 
-                href="https://instagram.com/athadkun" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-gray-400 hover:text-pink-500 transition-colors flex items-center justify-center p-3 rounded-full hover:bg-gray-800 bg-gray-900 shadow border border-gray-800" 
+              <a
+                href="https://instagram.com/athadkun"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-pink-500 transition-colors flex items-center justify-center p-3 rounded-full hover:bg-gray-800 bg-gray-900 shadow border border-gray-800"
                 aria-label="Instagram"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
@@ -89,7 +78,7 @@ export function Footer() {
           </div>
 
           <div className="mt-6 text-gray-500 text-sm">
-            <p>جميع الحقوق محفوظة &copy; {currentYear} MangaTK.</p>
+            <p>{t('footerRights')} &copy; {currentYear} MangaTK.</p>
           </div>
         </div>
       </div>

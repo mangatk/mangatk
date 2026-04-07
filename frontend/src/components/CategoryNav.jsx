@@ -55,18 +55,20 @@
 // }
 'use client';
 import { useState, useEffect } from 'react';
-import { getCategories } from '@/services/api'; // استدعاء API
+import { getCategories } from '@/services/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 export function CategoryNav({ onCategorySelect }) {
+  const { t, tDynamic } = useLanguage();
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     async function fetchCats() {
       try {
         const data = await getCategories();
-        setCategories(data); // data should be array of slugs
+        setCategories(data);
       } catch (err) {
-        console.error("Error fetching categories", err);
+        console.error('Error fetching categories', err);
       }
     }
     fetchCats();
@@ -78,13 +80,13 @@ export function CategoryNav({ onCategorySelect }) {
         <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
           {categories.length > 0 ? categories.map(category => (
             <button
-              key={category}
-              onClick={() => onCategorySelect(category)}
-              className="whitespace-nowrap px-4 py-2 bg-white dark:bg-gray-700 rounded-lg border hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors capitalize"
+              key={category.slug}
+              onClick={() => onCategorySelect(category.slug)}
+              className="whitespace-nowrap px-4 py-2 bg-white dark:bg-gray-700 rounded-lg border hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors"
             >
-              {category.replace(/-/g, ' ')}
+              {tDynamic(category.name, category.title_ar)}
             </button>
-          )) : <div className="text-gray-500 text-sm">جاري تحميل التصنيفات...</div>}
+          )) : <div className="text-gray-500 text-sm">{t('loadingCats')}</div>}
         </div>
       </div>
     </section>

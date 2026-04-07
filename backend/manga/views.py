@@ -741,7 +741,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         for reply in replies:
             reply_data.append({
                 'id': str(reply.id),
-                'user_name': reply.user.username,
+                # 'user_name': reply.user.username,
+                'user_name': reply.user.public_display_name,
                 'content': reply.content,
                 'created_at': reply.created_at.isoformat(),
                 'chapter_id': str(reply.chapter_id) if reply.chapter else None,
