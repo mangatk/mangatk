@@ -13,6 +13,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'MangaTK',
   description: 'Your favorite manga website',
+  icons: {
+    icon: 'https://i.ibb.co/NnyJ7LWB/071d3330ff30.png',
+  },
 };
 
 export default function RootLayout({
