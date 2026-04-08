@@ -17,6 +17,12 @@ function BrowseContent() {
    const initialAuthor = searchParams.get('author') || undefined;
    const initialArtist = searchParams.get('artist') || undefined;
 
+   const getSortText = (q: string | null) => {
+      if (q === 'views') return 'Most Popular';
+      if (q === 'latest') return 'Latest Chapter';
+      return 'Latest Chapter'; // default
+   };
+
    const [manga, setManga] = useState<Manga[]>([]);
    const [loading, setLoading] = useState(true);
    const [loadingMore, setLoadingMore] = useState(false);
@@ -25,10 +31,18 @@ function BrowseContent() {
       status: 'All',
       categories: initialCategory ? [initialCategory] : [],
       genres: initialGenre ? [initialGenre] : [],
-      sortBy: 'Latest Chapter',
+      sortBy: getSortText(searchParams.get('sort')),
       author: initialAuthor,
       artist: initialArtist
    });
+
+   // Sync filters when searchParams change (e.g. from Header links)
+   useEffect(() => {
+      setFilters(prev => ({
+         ...prev,
+         sortBy: getSortText(searchParams.get('sort'))
+      }));
+   }, [searchParams]);
 
    // Pagination state
    const [currentPage, setCurrentPage] = useState(1);
@@ -97,7 +111,7 @@ function BrowseContent() {
             {/* Filter Bar */}
             <div className="sticky top-16 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
                <div className="container mx-auto px-4">
-                  <FilterSection onFilter={handleFilter} onSort={handleSort} initialGenres={filters.genres} />
+                  <FilterSection onFilter={handleFilter} onSort={handleSort} initialGenres={filters.genres} initialSort={filters.sortBy} />
                </div>
             </div>
 

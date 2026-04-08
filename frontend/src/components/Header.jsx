@@ -292,7 +292,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { FaSun, FaMoon, FaSignOutAlt, FaBell, FaBars, FaTimes, FaSearch } from 'react-icons/fa';
 import { SearchBar } from './SearchBar';
@@ -305,6 +305,7 @@ export function Header() {
   const { user, login, register, logout } = useAuth();
   const { lang, toggleLang, t } = useLanguage();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
@@ -340,7 +341,20 @@ export function Header() {
 
   const isActive = (path) => {
     if (path === '/') return pathname === '/';
-    return pathname.startsWith(path.split('?')[0]) && path !== '/';
+    
+    const [base, queryStr] = path.split('?');
+    if (pathname !== base && !pathname.startsWith(`${base}/`)) return false;
+
+    if (queryStr) {
+      const targetParams = new URLSearchParams(queryStr);
+      for (const [k, v] of targetParams.entries()) {
+        if (searchParams.get(k) !== v) return false;
+      }
+      return true;
+    } else {
+      if (base === '/browse' && searchParams.has('sort')) return false;
+      return true;
+    }
   };
 
   return (
@@ -360,19 +374,19 @@ export function Header() {
               {mobileMenuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
             </button>
 
-            <Link href="/" className="text-xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent shrink-0 tracking-tight">
-              MangaTK
+            <Link href="/" className="shrink-0 flex items-center">
+              <img src="https://i.ibb.co/NnyJ7LWB/071d3330ff30.png" alt="MangaTK Logo" className="h-14 md:h-16 lg:h-20 w-auto transition-all" />
             </Link>
 
             <nav className="hidden lg:flex items-center">
-              <ul className="flex items-center gap-6">
+              <ul className="flex items-center gap-5 lg:gap-6">
                 {navItems.map((item, idx) => {
                   const active = isActive(item.path);
                   return (
                     <li key={idx}>
                       <Link
                         href={item.path}
-                        className={`text-sm font-medium transition-colors duration-200 relative pb-0.5 ${
+                        className={`text-sm font-semibold transition-colors duration-200 relative pb-1 ${
                           active
                             ? 'text-blue-600 dark:text-blue-400 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-500 after:rounded-full'
                             : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
@@ -552,8 +566,8 @@ export function Header() {
         {/* Mobile Nav */}
         {mobileMenuOpen && (
           <div
-            className="md:hidden fixed inset-x-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 z-[49] animate-in slide-in-from-top-2 duration-300 overflow-y-auto"
-            style={{ top: '56px', maxHeight: 'calc(100vh - 56px)' }}
+            className="lg:hidden fixed inset-x-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-2xl py-6 px-4 flex flex-col gap-6 z-[49] animate-in slide-in-from-top-2 duration-300 overflow-y-auto"
+            style={{ top: '76px', maxHeight: 'calc(100vh - 76px)' }}
           >
             <nav className="flex flex-col gap-3">
               {navItems.map((item, idx) => (

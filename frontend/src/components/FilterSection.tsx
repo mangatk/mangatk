@@ -157,15 +157,22 @@ interface FilterSectionProps {
   onFilter: (filters: FilterData) => void;
   onSort: (sortType: string) => void;
   initialGenres?: string[];
+  initialSort?: string;
 }
 
-export function FilterSection({ onFilter, onSort, initialGenres = [] }: FilterSectionProps) {
+export function FilterSection({ onFilter, onSort, initialGenres = [], initialSort = 'Name' }: FilterSectionProps) {
   const { t, tDynamic } = useLanguage();
   const [status, setStatus] = useState<string>('All');
   const [type, setType] = useState<string>('All');
-  const [order, setOrder] = useState<string>('Name');
+  const [order, setOrder] = useState<string>(initialSort || 'Name');
   const [selectedGenres, setSelectedGenres] = useState<string[]>(initialGenres);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+
+  useEffect(() => {
+    if (initialSort) {
+      setOrder(initialSort);
+    }
+  }, [initialSort]);
 
   const [lastInitialGenres, setLastInitialGenres] = useState<string[]>(initialGenres);
 

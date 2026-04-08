@@ -1,4 +1,3 @@
-// src/app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
 import { Auth0ProviderWrapper } from '@/context/Auth0ProviderWrapper';

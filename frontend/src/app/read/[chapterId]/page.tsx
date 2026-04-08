@@ -331,6 +331,13 @@ export default function ReaderPage() {
     window.scrollTo(0, 0);
   };
 
+  const navigateToChapter = (targetId: string) => {
+    // إفراغ الصور لإيقاف أي تحميل أو تجربة بروكسي جارية فوراً 
+    // مما يخفف الحمل عن المتصفح ويسمح لـ Next.js بالانتقال للفصل التالي بدون بطء
+    setChapter(prev => prev ? { ...prev, images: [] } : null);
+    router.push(`/read/${targetId}?mangaId=${mangaId}`);
+  };
+
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white gap-4">
       <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -345,13 +352,9 @@ export default function ReaderPage() {
       className="min-h-screen text-gray-200 font-sans selection:bg-blue-500 selection:text-white transition-colors duration-300"
       style={{ backgroundColor: bgColor }}
     >
-      <div className="hidden md:block">
-        <Header />
-      </div>
-
       {/* --- Reader Controls Header --- */}
       <header
-        className={`fixed top-0 md:top-16 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
+        className={`fixed top-0 left-0 right-0 h-16 bg-gray-900/95 backdrop-blur-md border-b border-gray-800 z-50 transition-transform duration-300 flex items-center justify-between px-4 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="flex items-center gap-3 md:gap-4">
           <Link href={`/manga/${chapter.mangaId}`} className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full">
@@ -619,11 +622,11 @@ export default function ReaderPage() {
 
       {/* --- Footer Controls --- */}
       {showControls && (
-        <footer className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-md border-t border-gray-700 flex items-center justify-between px-4 z-50">
-          <div className="w-1/3">
+        <footer className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-md border-t border-gray-700 flex items-center justify-center gap-4 px-4 z-50">
+          <div>
             {chapter.prevChapterId ? (
               <button
-                onClick={() => router.push(`/read/${chapter.prevChapterId}?mangaId=${mangaId}`)}
+                onClick={() => navigateToChapter(chapter.prevChapterId as string)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-blue-600 border border-gray-600 hover:border-blue-500 text-gray-300 hover:text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-blue-500/20"
               >
                 <FaChevronRight className="text-xs hidden sm:inline" /> السابق
@@ -633,7 +636,7 @@ export default function ReaderPage() {
             )}
           </div>
 
-          <div className="w-1/3 flex justify-center gap-2">
+          <div className="flex justify-center gap-2">
             {mode === 'vertical' && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsAutoScrolling(!isAutoScrolling); }}
@@ -652,10 +655,10 @@ export default function ReaderPage() {
             </div>
           </div>
 
-          <div className="w-1/3 flex justify-end">
+          <div>
             {chapter.nextChapterId ? (
               <button
-                onClick={() => router.push(`/read/${chapter.nextChapterId}?mangaId=${mangaId}`)}
+                onClick={() => navigateToChapter(chapter.nextChapterId as string)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 border border-blue-500 hover:border-blue-400 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md hover:shadow-blue-500/30"
               >
                 التالي <FaChevronLeft className="text-xs" />
