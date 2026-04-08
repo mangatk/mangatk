@@ -42,7 +42,7 @@ function HeaderContent() {
 
   const navItems = [
     { name: t('home'),          path: '/' },
-    { name: t('browse'),        path: '/browse' },
+    { name: t('browse'),        path: '/browse?sort=name' },
     { name: t('latest'),        path: '/browse?sort=latest' },
     { name: t('popular'),       path: '/browse?sort=views' },
     { name: t('translate'),     path: '/translate' },

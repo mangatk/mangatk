@@ -18,6 +18,7 @@ function BrowseContent() {
    const initialArtist = searchParams.get('artist') || undefined;
 
    const getSortText = (q: string | null) => {
+      if (q === 'name') return 'Name';
       if (q === 'views') return 'Most Popular';
       if (q === 'latest') return 'Latest Chapter';
       return 'Latest Chapter'; // default
