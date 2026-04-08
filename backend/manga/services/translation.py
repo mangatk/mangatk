@@ -4,8 +4,17 @@ Supports ZIP and CBZ files only
 """
 import os
 import zipfile
+import io
+import shutil
 from pathlib import Path
 from django.conf import settings
+from PIL import Image
+
+# Security Constants
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB per image
+MAX_TOTAL_UNCOMPRESSED_SIZE = 300 * 1024 * 1024  # 300 MB per chapter ZIP
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
+
 
 class TranslationService:
     """Service for handling translation file operations"""
@@ -37,7 +46,7 @@ class TranslationService:
     @staticmethod
     def extract_archive(archive_path, job_id):
         """
-        فك ضغط ملف ZIP/CBZ واستخراج الصور
+        فك ضغط ملف ZIP/CBZ واستخراج الصور بأمان
         Args:
             archive_path: Path to archive file
             job_id: UUID of the translation job
@@ -47,16 +56,35 @@ class TranslationService:
         extract_dir = TranslationService.UPLOAD_DIR / str(job_id) / 'extracted'
         extract_dir.mkdir(parents=True, exist_ok=True)
         
-        # فك الضغط
-        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
-        
-        # جمع ملفات الصور فقط
+        # فك الضغط بأمان
         images = []
-        for root, dirs, files in os.walk(extract_dir):
-            for file in files:
-                if Path(file).suffix.lower() in TranslationService.ALLOWED_IMAGES:
-                    images.append(os.path.join(root, file))
+        try:
+            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                # جمع ملفات الصور التي سنستخرجها
+                image_files = [
+                    f for f in zip_ref.namelist()
+                    if Path(f).suffix.lower() in TranslationService.ALLOWED_IMAGES
+                    and not f.startswith('__MACOSX')
+                    and not f.startswith('.')
+                ]
+                
+                for img_file in image_files:
+                    # 🛡️ الحماية من ZipSlip: استخراج السطح فقط (basename)
+                    filename = os.path.basename(img_file)
+                    if not filename: continue
+                    
+                    target_path = extract_dir / filename
+                    
+                    # استخراج الملف يدوياً لضمان عدم وجود تلاعب في المسارات
+                    with zip_ref.open(img_file) as source, open(target_path, 'wb') as target:
+                        shutil.copyfileobj(source, target)
+                    
+                    images.append(str(target_path))
+        except Exception as e:
+            # تنظيف المخلفات في حال الفشل
+            if extract_dir.exists():
+                shutil.rmtree(extract_dir)
+            raise e
         
         # ترتيب الصور حسب الاسم
         images.sort()
@@ -98,22 +126,65 @@ class TranslationService:
         return str(archive_path)
     
     @staticmethod
+    def _is_valid_image(file_data: bytes) -> bool:
+        """التحقق من أن البيانات هي فعلاً صورة حقيقية"""
+        try:
+            with Image.open(io.BytesIO(file_data)) as img:
+                img.verify()
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
     def validate_archive(file):
         """
-        التحقق من صحة الملف المرفوع
+        التحقق الأمني من صحة الملف المرفوع
         Args:
             file: UploadedFile object
         Returns:
             tuple: (is_valid: bool, error_message: str)
         """
-        # التحقق من الامتداد
+        # 1. التحقق من الامتداد
         ext = Path(file.name).suffix.lower()
         if ext not in TranslationService.ALLOWED_ARCHIVES:
             return False, f"نوع الملف غير مدعوم. الأنواع المسموحة: {', '.join(TranslationService.ALLOWED_ARCHIVES)}"
         
-        # التحقق من الحجم (مثلاً 100MB)
-        max_size = 100 * 1024 * 1024  # 100MB
+        # 2. التحقق من الحجم (مثلاً 150MB كحد أقصى للترجمة)
+        max_size = 150 * 1024 * 1024
         if file.size > max_size:
             return False, f"حجم الملف كبير جداً. الحد الأقصى: {max_size // (1024*1024)}MB"
+        
+        # 3. فحص أمني لمحتويات الـ ZIP (بدون استخراج الكل)
+        try:
+            with zipfile.ZipFile(file, 'r') as zip_ref:
+                # فحص الـ ZIP نفسه
+                if zip_ref.testzip():
+                    return False, "ملف تالف داخلياً"
+                
+                # فحص الحجم الإجمالي بعد فك الضغط (الحماية من قنابل الضغط)
+                total_size = sum(zinfo.file_size for zinfo in zip_ref.infolist())
+                if total_size > MAX_TOTAL_UNCOMPRESSED_SIZE:
+                    return False, "حجم الملفات بعد الاستخراج كبير جداً"
+                
+                # فحص عينة من ملفات الصور
+                found_images = False
+                for zinfo in zip_ref.infolist():
+                    if Path(zinfo.filename).suffix.lower() in TranslationService.ALLOWED_IMAGES:
+                        found_images = True
+                        if zinfo.file_size > MAX_IMAGE_SIZE:
+                            return False, f"الصورة {zinfo.filename} كبيرة جداً"
+                        
+                        # فحص أمني للمحتوى (أول 10KB)
+                        with zip_ref.open(zinfo.filename) as f:
+                            if not TranslationService._is_valid_image(f.read(1024 * 10)):
+                                return False, f"الملف {zinfo.filename} ليس صورة صالحة"
+                                
+                if not found_images:
+                    return False, "لا توجد صور في الملف"
+                    
+        except zipfile.BadZipFile:
+            return False, "الملف ليس ملف ZIP/CBZ صالح"
+        except Exception as e:
+            return False, "فشل في فحص أمان الملف"
         
         return True, ""

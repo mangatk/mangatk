@@ -14,8 +14,15 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 import logging
+from PIL import Image
+import io
 
 logger = logging.getLogger(__name__)
+
+# Security Constants
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB per image
+MAX_TOTAL_UNCOMPRESSED_SIZE = 300 * 1024 * 1024  # 300 MB per chapter ZIP
+ALLOWED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp')
 
 
 class TranslationService:
@@ -138,7 +145,7 @@ class TranslationService:
             # فلترة الصور فقط
             image_files = [
                 f for f in all_files
-                if f.lower().endswith(image_extensions)
+                if f.lower().endswith(ALLOWED_IMAGE_EXTENSIONS)
                 and not f.startswith('__MACOSX')
                 and not f.startswith('.')
             ]
@@ -148,9 +155,18 @@ class TranslationService:
             
             # استخراج الصور
             for img_file in image_files:
-                zip_ref.extract(img_file, extract_to)
-                full_path = os.path.join(extract_to, img_file)
-                images.append(full_path)
+                # 🛡️ الحماية من ZipSlip (التأكد من أن المسار داخل مجلد الاستخراج)
+                filename = os.path.basename(img_file)
+                if not filename: continue
+                
+                target_path = os.path.join(extract_to, filename)
+                
+                # استخراج الملف بأمان
+                with zip_ref.open(img_file) as source, open(target_path, 'wb') as target:
+                    import shutil
+                    shutil.copyfileobj(source, target)
+                
+                images.append(target_path)
         
         return images
     
@@ -173,36 +189,63 @@ class TranslationService:
     
     
     @staticmethod
+    def _is_valid_image(file_data: bytes) -> bool:
+        """التحقق من أن البيانات هي فعلاً صورة حقيقية وليست ملفاً ضاراً متنكراً"""
+        try:
+            with Image.open(io.BytesIO(file_data)) as img:
+                img.verify()  # فحص سلامة الصورة
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
     def validate_zip(zip_path: str) -> Tuple[bool, str]:
         """
-        التحقق من صحة ملف ZIP
-        
-        Returns:
-            Tuple[bool, str]: (صحيح أم لا, رسالة)
+        التحقق الأمني والتقني من صحة ملف ZIP
         """
         try:
+            if not os.path.exists(zip_path):
+                return False, "الملف غير موجود"
+
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                # فحص الملف
+                # 1. فحص سلامة الـ ZIP
                 bad_file = zip_ref.testzip()
                 if bad_file:
-                    return False, f"ملف تالف: {bad_file}"
+                    return False, f"ملف تالف داخلياً: {bad_file}"
                 
-                # التحقق من وجود صور
-                image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
-                has_images = any(
-                    f.lower().endswith(image_extensions)
-                    for f in zip_ref.namelist()
-                )
+                # 2. فحص الحجم الإجمالي (الحماية من قنابل الضغط)
+                total_uncompressed_size = sum(zinfo.file_size for zinfo in zip_ref.infolist())
+                if total_uncompressed_size > MAX_TOTAL_UNCOMPRESSED_SIZE:
+                    return False, f"حجم الملف بعد الاستخراج كبير جداً ({total_uncompressed_size / 1024 / 1024:.1f}MB)"
+
+                # 3. التحقق من وجود صور وفحص كل صورة أمنياً
+                image_files = [
+                    f for f in zip_ref.namelist()
+                    if f.lower().endswith(ALLOWED_IMAGE_EXTENSIONS)
+                    and not f.startswith('__MACOSX')
+                ]
                 
-                if not has_images:
-                    return False, "لا يحتوي الملف على صور"
+                if not image_files:
+                    return False, "لا يحتوي الملف على صور صالحة"
                 
-                return True, "الملف صحيح"
+                # 4. فحص عينة من الصور (أو جميعها إذا كان العدد معقولاً) لضمان عدم وجود ملفات ضارة
+                for filename in image_files:
+                    zinfo = zip_ref.getinfo(filename)
+                    if zinfo.file_size > MAX_IMAGE_SIZE:
+                        return False, f"الصورة {filename} تتجاوز الحجم المسموح به"
+                    
+                    # فحص أمني للمحتوى
+                    with zip_ref.open(filename) as f:
+                        if not TranslationService._is_valid_image(f.read(1024 * 10)): # فحص أول 10KB يكفي غالباً
+                            return False, f"الملف {filename} ليس صورة صالحة أو قد يكون تالفاً/ضاراً"
+                
+                return True, "الملف آمن وصحيح"
                 
         except zipfile.BadZipFile:
-            return False, "ملف ZIP تالف"
+            return False, "ملف ZIP تالف أو غير مدعوم"
         except Exception as e:
-            return False, f"خطأ: {str(e)}"
+            logger.error(f"ZIP Validation Error: {str(e)}")
+            return False, f"عذراً، حدث خطأ أثناء فحص الملف أمنياً"
 
 
 # =====================================

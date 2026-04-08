@@ -56,6 +56,13 @@ def upload_for_translation(request):
             return Response({
                 'error': 'manga_id, chapter_number, and file are required'
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # 🛡️ الحماية من الملفات الضخمة (150MB كحد أقصى)
+        MAX_UPLOAD_SIZE = 150 * 1024 * 1024
+        if uploaded_file.size > MAX_UPLOAD_SIZE:
+            return Response({
+                'error': f'حجم الملف كبير جداً. الحد الأقصى المسموح به هو {MAX_UPLOAD_SIZE // (1024*1024)}MB'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         # Validate manga exists
         try:
