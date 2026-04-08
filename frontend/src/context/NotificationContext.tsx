@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 export interface AppNotification {
@@ -26,6 +27,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -102,7 +104,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       toast.custom((t) => (
         <div 
           onClick={() => { 
-            if (n.link) window.location.href = n.link; 
+            if (n.link) router.push(n.link); 
             toast.dismiss(t.id);
           }} 
           className="bg-slate-800 text-white rounded-xl shadow-2xl overflow-hidden flex flex-col gap-1 p-4 mb-2 min-w-[300px] border border-white/10"

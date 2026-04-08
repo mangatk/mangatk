@@ -116,18 +116,20 @@ export function DashboardHeader({ toggleSidebar }: DashboardHeaderProps) {
                             <>
                                 <div className="fixed inset-0 z-40 cursor-default" onClick={() => setUserMenuOpen(false)} />
                                 <div className="absolute top-full left-0 mt-3 w-48 bg-slate-800 rounded-xl shadow-2xl border border-white/10 overflow-hidden py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <a 
+                                    <Link 
                                         href="/profile" 
+                                        onClick={() => setUserMenuOpen(false)}
                                         className="block px-4 py-3 hover:bg-slate-700/50 text-white font-semibold transition-colors border-b border-white/5"
                                     >
                                         الملف الشخصي
-                                    </a>
-                                    <a 
+                                    </Link>
+                                    <Link 
                                         href="/" 
+                                        onClick={() => setUserMenuOpen(false)}
                                         className="block px-4 py-3 hover:bg-slate-700/50 text-white font-semibold transition-colors border-b border-white/5"
                                     >
                                         الصفحة الرئيسية
-                                    </a>
+                                    </Link>
                                     <button 
                                         onClick={() => {
                                             setUserMenuOpen(false);
