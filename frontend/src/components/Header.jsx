@@ -301,7 +301,7 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementToast } from './AchievementToast';
 import { useLanguage } from '@/context/LanguageContext';
 
-export function Header() {
+function HeaderContent() {
   const { user, login, register, logout } = useAuth();
   const { lang, toggleLang, t } = useLanguage();
   const pathname = usePathname();
@@ -617,5 +617,13 @@ export function Header() {
         )}
       </header>
     </>
+  );
+}
+
+export function Header() {
+  return (
+    <Suspense fallback={<div className="h-16 md:h-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800" />}>
+      <HeaderContent />
+    </Suspense>
   );
 }
