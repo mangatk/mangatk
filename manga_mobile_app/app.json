@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "MangaTK",
+    "slug": "manga_mobile_app",
+    "scheme": "com.helmy001.manga_mobile_app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.helmy001.manga_mobile_app",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "MANAGE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "207d1c19-a9cb-453a-be35-19e13784d5ac"
+      }
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-image-picker",
+      "@react-native-google-signin/google-signin",
+      "react-native-auth0"
+    ]
+  }
+}

@@ -14,47 +14,31 @@ from typing import List, Dict, Callable, Optional
 from pathlib import Path
 import logging
 import threading
+from .ai.pipeline import MangaTranslationPipeline
 
 logger = logging.getLogger(__name__)
 
 
 class CustomTranslator:
     """
-    نموذج الترجمة المخصص - يجب على المستخدم تنفيذ هذا
-    
-    المثال التالي هو قالب - قم باستبداله بالكود الفعلي
+    Advanced AI Translation Service using the 5-model pipeline.
+    Connects to Modal.com (Remote GPU) or local AI models.
     """
     
     @classmethod
     def translate_chapter(cls, input_zip_path: str, output_dir: str) -> List[str]:
         """
-        ترجمة فصل من ملف ZIP/CBZ
+        Translate a chapter using the AI Pipeline.
         
         Args:
-            input_zip_path: مسار ملف ZIP/CBZ الأصلي
-            output_dir: المجلد الذي سيتم حفظ الصور المترجمة فيه
+            input_zip_path: Path to original ZIP/CBZ
+            output_dir: Directory for translated images
             
         Returns:
-            قائمة بمسارات الصور المترجمة (مرتبة حسب رقم الصفحة)
-            
-        Example:
-            >>> translated_images = CustomTranslator.translate_chapter(
-            ...     '/tmp/chapter.zip',
-            ...     '/tmp/translated/'
-            ... )
-            >>> print(translated_images)
-            ['/tmp/translated/page_001.png', '/tmp/translated/page_002.png', ...]
+            List of translated image paths
         """
-        
-        logger.info("استخدام المترجم الوهمي (Mock Translator) بناءً على طلب المستخدم لحين ربط الموديل الخاص")
-        
-        import time
-        from .mock_translator import MockTranslator
-        
-        # محاكاة بسيطة للوقت لكي يعمل شريط التقدم بوضوح
-        time.sleep(2)
-        
-        return MockTranslator.translate_chapter(input_zip_path, output_dir)
+        pipeline = MangaTranslationPipeline.get_instance()
+        return pipeline.translate_chapter(input_zip_path, output_dir)
 
     @classmethod
     def translate_chapter_async(
@@ -66,45 +50,23 @@ class CustomTranslator:
         on_error: Optional[Callable[[str], None]] = None
     ) -> threading.Thread:
         """
-        ترجمة غير متزامنة مع callbacks للتقدم
-        
-        Args:
-            input_zip_path: مسار ملف ZIP/CBZ
-            output_dir: مجلد الإخراج
-            on_progress: callback(current, total) للتقدم
-            on_complete: callback(translated_paths) عند الانتهاء
-            on_error: callback(error_message) عند حدوث خطأ
-            
-        Returns:
-            threading.Thread object
-            
-        Example:
-            >>> def progress(current, total):
-            ...     print(f"Progress: {current}/{total}")
-            >>> 
-            >>> def complete(paths):
-            ...     print(f"Completed! {len(paths)} images")
-            >>> 
-            >>> thread = CustomTranslator.translate_chapter_async(
-            ...     'chapter.zip',
-            ...     '/tmp/out',
-            ...     on_progress=progress,
-            ...     on_complete=complete
-            ... )
+        Asynchronous translation with progress callbacks.
         """
         
         def worker():
             try:
-                # TODO: إذا كان لديك progress tracking في نموذجك،
-                # استخدم on_progress callback
-                
-                result = cls.translate_chapter(input_zip_path, output_dir)
+                pipeline = MangaTranslationPipeline.get_instance()
+                result = pipeline.translate_chapter(
+                    input_zip_path, 
+                    output_dir, 
+                    on_progress=on_progress
+                )
                 
                 if on_complete:
                     on_complete(result)
                     
             except Exception as e:
-                logger.error(f"خطأ في الترجمة الغير متزامنة: {e}")
+                logger.error(f"Async translation error: {e}")
                 if on_error:
                     on_error(str(e))
         
@@ -114,11 +76,25 @@ class CustomTranslator:
 
     @classmethod
     def test_model(cls) -> Dict:
+        """Test health of local/remote models."""
+        pipeline = MangaTranslationPipeline.get_instance()
+        if pipeline.modal_client:
+            health = pipeline.modal_client.health_check()
+            return {
+                'status': health.get('status', 'unknown'),
+                'message': health.get('message', 'Remote Modal.com connection tested'),
+                'model_name': 'Modal GPU Cluster',
+                'ready': health.get('status') == 'ready',
+                'async_supported': True
+            }
+        
+        # Test local models
+        results = pipeline.test_models()
         return {
-            'status': 'mock',
-            'message': 'Simulation Ready: The system is running the Mock Translator while awaiting the custom translation model.',
-            'model_name': 'Mock Translation Model',
-            'ready': True,
+            'status': results['overall']['status'],
+            'message': results['overall']['message'],
+            'model_name': 'Local AI Pipeline',
+            'ready': results['overall']['status'] == 'ok',
             'async_supported': True
         }
 

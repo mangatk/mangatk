@@ -211,8 +211,21 @@ def upload_for_translation(request):
                         link=f"/translate",
                         notification_type='translation'
                     )
+                    
+                    # Notify Admin that a user translation is ready for publishing
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    admins = User.objects.filter(is_staff=True)
+                    for admin in admins:
+                        Notification.objects.create(
+                            user=admin,
+                            title="ترجمة مستخدم جديدة",
+                            message=f"قام المستخدم {job.user.username} بترجمة فصل جديد. يمكنك مراجعته ونشره الآن.",
+                            link=f"/dashboard/translations", # Assuming this is the admin translation dashboard
+                            notification_type='translation'
+                        )
                 except Exception as ne:
-                    logger.error(f"Failed to create translation notification: {ne}")
+                    logger.error(f"Failed to create translation notifications: {ne}")
                 
             except Exception as e:
                 logger.error(f"Error in completion callback for job {job.id}: {e}")
