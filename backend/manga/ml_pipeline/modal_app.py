@@ -180,27 +180,27 @@ class TranslationPipeline:
     #         return "[Translation Error]"
 
     def _translate(self, text):
-    try:
-        source_text = f">>ara<< {text}"
-        inputs = self.tokenizer(
-            source_text,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=512
-        ).to(self.device)
+        try:
+            source_text = f">>ara<< {text}"
+            inputs = self.tokenizer(
+                source_text,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=512
+            ).to(self.device)
 
-        with self._torch.no_grad():
-            tokens = self.translation_model.generate(
-                **inputs,
-                max_new_tokens=256,
-                num_beams=4
-            )
+            with self._torch.no_grad():
+                tokens = self.translation_model.generate(
+                    **inputs,
+                    max_new_tokens=256,
+                    num_beams=4
+                )
 
-        return self.tokenizer.decode(tokens[0], skip_special_tokens=True)
-    except Exception as e:
-        print(f"Translation error: {e}")
-        return "[Translation Error]"
+            return self.tokenizer.decode(tokens[0], skip_special_tokens=True)
+        except Exception as e:
+            print(f"Translation error: {e}")
+            return "[Translation Error]"
 
     def _get_sentiment(self, text):
         try:
