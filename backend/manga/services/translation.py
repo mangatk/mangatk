@@ -174,9 +174,9 @@ class TranslationService:
                         if zinfo.file_size > MAX_IMAGE_SIZE:
                             return False, f"الصورة {zinfo.filename} كبيرة جداً"
                         
-                        # فحص أمني للمحتوى (أول 10KB)
+                        # فحص أمني للمحتوى
                         with zip_ref.open(zinfo.filename) as f:
-                            if not TranslationService._is_valid_image(f.read(1024 * 10)):
+                            if not TranslationService._is_valid_image(f.read()):
                                 return False, f"الملف {zinfo.filename} ليس صورة صالحة"
                                 
                 if not found_images:

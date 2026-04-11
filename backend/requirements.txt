@@ -49,3 +49,6 @@ vine==5.1.0
 wcwidth==0.2.13
 setuptools
 firebase-admin
+numpy>=1.24.0
+modal>=0.62.0
+Pillow>=10.0.0

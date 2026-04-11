@@ -236,7 +236,7 @@ class TranslationService:
                     
                     # فحص أمني للمحتوى
                     with zip_ref.open(filename) as f:
-                        if not TranslationService._is_valid_image(f.read(1024 * 10)): # فحص أول 10KB يكفي غالباً
+                        if not TranslationService._is_valid_image(f.read()):
                             return False, f"الملف {filename} ليس صورة صالحة أو قد يكون تالفاً/ضاراً"
                 
                 return True, "الملف آمن وصحيح"
