@@ -113,7 +113,7 @@ class TranslationPipeline:
         # 4. Translator
         print("  Loading translation model...")
         model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)
         self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(model_id).to(self.device)
 
         # 5. LaMa Inpainter

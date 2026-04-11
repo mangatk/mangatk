@@ -30,7 +30,7 @@ def download_models():
     print("📥 Downloading translation model...")
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
     model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
-    AutoTokenizer.from_pretrained(model_id)
+    AutoTokenizer.from_pretrained(model_id, use_fast=False)
     AutoModelForSeq2SeqLM.from_pretrained(model_id)
     print("✅ Translation model cached.")
 
