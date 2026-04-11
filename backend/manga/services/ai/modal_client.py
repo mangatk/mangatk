@@ -48,7 +48,11 @@ class ModalTranslationClient:
 
         # Derive health endpoint from translate endpoint
         self.translate_url = self.base_url
-        self.health_url = self.base_url.rsplit('translate', 1)[0] + 'health'
+        parts = self.base_url.rsplit('translate', 1)
+        if len(parts) == 2:
+            self.health_url = parts[0] + 'health' + parts[1]
+        else:
+            self.health_url = self.base_url
         self.timeout = 120  # 2 minutes per page
 
     def health_check(self) -> dict:
