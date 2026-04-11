@@ -12,6 +12,14 @@ Deployment:
 import modal
 import io
 import os
+import typing
+
+try:
+    from fastapi import Request
+    from fastapi.responses import Response as FastAPIResponse
+except ImportError:
+    Request = typing.Any
+    FastAPIResponse = typing.Any
 
 # Import the download logic from our init script
 # Since Modal image build happens in its own environment, we include the script in the context
@@ -410,8 +418,7 @@ class TranslationPipeline:
         return buf.getvalue()
 
     @modal.fastapi_endpoint(method="POST")
-    async def translate(self, request: __import__("fastapi").Request):
-        from fastapi.responses import Response as FastAPIResponse
+    async def translate(self, request: Request):
         try:
             form = await request.form()
             image_file = form.get("image")
