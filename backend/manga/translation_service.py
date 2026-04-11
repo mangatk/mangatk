@@ -62,50 +62,34 @@ class TranslationService:
         try:
             logger.info(f"Starting translation for: {input_zip_path}")
             
-            # =====================================
-            # 📍 ضع كود الترجمة الخاص بك هنا
-            # =====================================
+            from .services.custom_translator import CustomTranslator
             
-            # المثال التالي يوضح البنية الأساسية:
-            
-            # 1. إنشاء مجلدات مؤقتة
-            temp_extract = tempfile.mkdtemp(prefix='manga_original_')
+            # 1. إنشاء مجلد وجهة للصور المترجمة
             temp_translated = tempfile.mkdtemp(prefix='manga_translated_')
             
-            # 2. استخراج الصور من ZIP
-            images = TranslationService._extract_images(input_zip_path, temp_extract)
-            logger.info(f"Extracted {len(images)} images")
+            # 2. إرسال الفصل إلى خط الذكاء الاصطناعي للترجمة
+            logger.info("Routing to CustomTranslator AI pipeline...")
+            translated_images = CustomTranslator.translate_chapter(
+                input_zip_path,
+                temp_translated
+            )
             
-            # 3. ترجمة كل صورة
-            # 🎯 هنا ضع كود نموذج الترجمة الخاص بك
-            translated_images = []
-            for i, image_path in enumerate(images):
-                # TODO: استبدل بنموذج الترجمة الفعلي
-                # مثال: translated_img = your_translation_model(image_path)
-                
-                # حالياً: فقط نسخ الصورة (placeholder)
-                import shutil
-                output_path = os.path.join(temp_translated, os.path.basename(image_path))
-                shutil.copy2(image_path, output_path)
-                translated_images.append(output_path)
-                
-                logger.info(f"Translated image {i+1}/{len(images)}")
-            
-            # 4. إنشاء ملف ZIP مترجم
+            # 3. إنشاء ملف ZIP المترجم
             if output_dir is None:
                 output_dir = tempfile.gettempdir()
             
             output_filename = f"translated_{os.path.basename(input_zip_path)}"
             output_path = os.path.join(output_dir, output_filename)
             
+            # 4. حفظ الصور الجديدة في ملف مضغوط
             TranslationService._create_zip(translated_images, output_path)
             logger.info(f"Created translated ZIP: {output_path}")
             
             # 5. معلومات النتيجة
             result_info = {
-                'total_images': len(images),
+                'total_images': len(translated_images),
                 'translated_images': len(translated_images),
-                'failed_images': len(images) - len(translated_images),
+                'failed_images': 0,
                 'output_path': output_path,
                 'original_size': os.path.getsize(input_zip_path),
                 'translated_size': os.path.getsize(output_path)
@@ -113,7 +97,6 @@ class TranslationService:
             
             # 6. تنظيف الملفات المؤقتة
             import shutil
-            shutil.rmtree(temp_extract, ignore_errors=True)
             shutil.rmtree(temp_translated, ignore_errors=True)
             
             return output_path, result_info
