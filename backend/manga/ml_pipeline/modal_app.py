@@ -35,6 +35,9 @@ image = (
         "libfribidi-dev",   # Arabic text shaping (for Pillow)
         "libraqm-dev",      # Complex text layout (for Pillow RTL)
         "wget",
+        "build-essential",
+        "python3-dev",
+        "cmake",
     )
     .pip_install(
         "torch",
@@ -45,7 +48,7 @@ image = (
         "simple-lama-inpainting",
         "transformers",
         "sentencepiece",
-        "protobuf",
+        "protobuf<=5.29.3",
         "tiktoken",
         "opencv-python-headless",
         "numpy",

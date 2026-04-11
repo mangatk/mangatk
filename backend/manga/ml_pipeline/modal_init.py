@@ -12,6 +12,16 @@ import io
 
 def download_models():
     """Pre-download all models at image build time (cached in the image)."""
+    # --- DEBUG: Verify dependencies ---
+    try:
+        import sentencepiece
+        print(f"DEBUG: sentencepiece imported successfully. Version: {getattr(sentencepiece, '__version__', 'unknown')}")
+    except Exception as e:
+        print(f"❌ DEBUG ERROR: sentencepiece import failed!")
+        import traceback
+        traceback.print_exc()
+        # Don't exit yet, let transformers try to load it too for more context
+
     import torch
 
     # --- Bubble Detector (YOLO weights from HuggingFace) ---
