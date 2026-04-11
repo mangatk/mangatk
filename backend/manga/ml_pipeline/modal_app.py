@@ -15,6 +15,10 @@ import os
 
 # Import the download logic from our init script
 # Since Modal image build happens in its own environment, we include the script in the context
+TRANSLATION_MODEL_ID = os.environ.get(
+    "TRANSLATION_MODEL_ID",
+    "Helsinki-NLP/opus-mt-ja-ar"
+)
 try:
     from .modal_init import download_models
 except ImportError:
@@ -113,11 +117,17 @@ class TranslationPipeline:
             device=pt_device
         )
 
+        # # 4. Translator
+        # print("  Loading translation model...")
+        # model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
+        # self.tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)
+        # self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(model_id).to(self.device)
+        
         # 4. Translator
         print("  Loading translation model...")
-        model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)
-        self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(model_id).to(self.device)
+        self.translation_model_id = TRANSLATION_MODEL_ID
+        self.tokenizer = AutoTokenizer.from_pretrained(self.translation_model_id, use_fast=False)
+        self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(self.translation_model_id).to(self.device)
 
         # 5. LaMa Inpainter
         print("  Loading LaMa inpainter...")
@@ -160,14 +170,37 @@ class TranslationPipeline:
             return len(self._re.findall(r'[a-zA-Z]', text)) > 0
         return True
 
+    # def _translate(self, text):
+    #     try:
+    #         inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(self.device)
+    #         with self._torch.no_grad():
+    #             tokens = self.translation_model.generate(**inputs)
+    #         return self.tokenizer.decode(tokens[0], skip_special_tokens=True)
+    #     except Exception as e:
+    #         return "[Translation Error]"
+
     def _translate(self, text):
-        try:
-            inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(self.device)
-            with self._torch.no_grad():
-                tokens = self.translation_model.generate(**inputs)
-            return self.tokenizer.decode(tokens[0], skip_special_tokens=True)
-        except Exception as e:
-            return "[Translation Error]"
+    try:
+        source_text = f">>ara<< {text}"
+        inputs = self.tokenizer(
+            source_text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=512
+        ).to(self.device)
+
+        with self._torch.no_grad():
+            tokens = self.translation_model.generate(
+                **inputs,
+                max_new_tokens=256,
+                num_beams=4
+            )
+
+        return self.tokenizer.decode(tokens[0], skip_special_tokens=True)
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return "[Translation Error]"
 
     def _get_sentiment(self, text):
         try:

@@ -10,6 +10,11 @@ This is separated to allow for a one-time setup/caching process.
 import os
 import io
 
+TRANSLATION_MODEL_ID = os.environ.get(
+    "TRANSLATION_MODEL_ID",
+    "Helsinki-NLP/opus-mt-ja-ar"
+)
+
 def download_models():
     """Pre-download all models at image build time (cached in the image)."""
     # --- DEBUG: Verify dependencies ---
@@ -38,13 +43,22 @@ def download_models():
     else:
         print(f"⚠️ No .pt files found in {repo_id}, files: {files}")
 
+    # # --- Translation Model (Seq2Seq from HuggingFace) ---
+    # print("📥 Downloading translation model...")
+    # from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+    # model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
+    # AutoTokenizer.from_pretrained(model_id, use_fast=False)
+    # AutoModelForSeq2SeqLM.from_pretrained(model_id)
+    # print("✅ Translation model cached.")
+
     # --- Translation Model (Seq2Seq from HuggingFace) ---
     print("📥 Downloading translation model...")
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-    model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
-    AutoTokenizer.from_pretrained(model_id, use_fast=False)
-    AutoModelForSeq2SeqLM.from_pretrained(model_id)
-    print("✅ Translation model cached.")
+
+    AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, use_fast=False)
+    AutoModelForSeq2SeqLM.from_pretrained(TRANSLATION_MODEL_ID)
+
+    print(f"✅ Translation model cached: {TRANSLATION_MODEL_ID}")
 
     # --- Sentiment Model (BERT from HuggingFace) ---
     print("📥 Downloading sentiment model...")
