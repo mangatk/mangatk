@@ -410,19 +410,22 @@ class TranslationPipeline:
         return buf.getvalue()
 
     @modal.fastapi_endpoint(method="POST")
-    async def translate(self, request):
+    async def translate(self, request: __import__("fastapi").Request):
         from fastapi.responses import Response as FastAPIResponse
-        form = await request.form()
-        image_file = form.get("image")
-        source_lang = form.get("source_lang", "ja")
-        target_lang = form.get("target_lang", "ar")
+        try:
+            form = await request.form()
+            image_file = form.get("image")
+            source_lang = form.get("source_lang", "ja")
+            target_lang = form.get("target_lang", "ar")
 
-        if not image_file:
-            return FastAPIResponse(content='{"error": "No image provided"}', status_code=400, media_type="application/json")
+            if not image_file:
+                return FastAPIResponse(content='{"error": "No image provided"}', status_code=400, media_type="application/json")
 
-        image_bytes = await image_file.read()
-        translated_bytes = self.translate_page.local(image_bytes, source_lang, target_lang)
-        return FastAPIResponse(content=translated_bytes, media_type="image/png")
+            image_bytes = await image_file.read()
+            translated_bytes = self.translate_page.local(image_bytes, source_lang, target_lang)
+            return FastAPIResponse(content=translated_bytes, media_type="image/png")
+        except Exception as e:
+            return FastAPIResponse(content=f'{{"error": "{str(e)}"}}', status_code=500, media_type="application/json")
 
     @modal.fastapi_endpoint(method="GET")
     async def health(self):
