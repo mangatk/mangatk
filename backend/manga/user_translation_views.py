@@ -168,6 +168,12 @@ def upload_for_translation(request):
         translation_output_dir = Path(settings.MEDIA_ROOT) / 'translations' /'temp' / str(job.id) / 'translated'
         translation_output_dir.mkdir(parents=True, exist_ok=True)
         
+        def on_progress(current, total):
+            """Callback for real-time translation progress tracking"""
+            job.translated_pages = current
+            job.total_pages = total
+            job.save(update_fields=['translated_pages', 'total_pages'])
+        
         def on_complete(translated_paths):
             """Callback when translation completes"""
             try:
@@ -208,7 +214,7 @@ def upload_for_translation(request):
                         user=job.user,
                         title="اكتملت الترجمة",
                         message=f"تم الانتهاء من ترجمة الفصل بنجاح. يمكنك الآن الاطلاع عليه أو تحميله.",
-                        link=f"/translate",
+                        link=f"/translate?job_id={job.id}",
                         notification_type='translation'
                     )
                     
@@ -220,8 +226,8 @@ def upload_for_translation(request):
                         Notification.objects.create(
                             user=admin,
                             title="ترجمة مستخدم جديدة",
-                            message=f"قام المستخدم {job.user.username} بترجمة فصل جديد. يمكنك مراجعته ونشره الآن.",
-                            link=f"/dashboard/translations", # Assuming this is the admin translation dashboard
+                            message=f"قام المستخدم {job.user.public_display_name} بترجمة فصل جديد. يمكنك مراجعته ونشره الآن.",
+                            link=f"/dashboard/translate?job_id={job.id}", # Updated link for admin viewing
                             notification_type='translation'
                         )
                 except Exception as ne:
@@ -286,6 +292,7 @@ def upload_for_translation(request):
         CustomTranslator.translate_chapter_async(
             job.temp_upload_path,
             str(translation_output_dir),
+            on_progress=on_progress,
             on_complete=on_complete,
             on_error=on_error
         )

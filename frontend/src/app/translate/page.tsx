@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUpload, FaDownload, FaRobot, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import ChapterPreview, { ViewMode } from '@/components/ChapterPreview';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +28,8 @@ interface TranslationJob {
 }
 
 export default function TranslatePage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, isAuthenticated, token } = useAuth();
     const { t } = useLanguage();
     const [file, setFile] = useState<File | null>(null);
@@ -45,7 +48,21 @@ export default function TranslatePage() {
     // Fetch user points on mount
     useEffect(() => {
         fetchUserPoints();
-    }, []);
+    }, [token]);
+
+    // Resume from URL if exists
+    useEffect(() => {
+        const jobId = searchParams.get('job_id');
+        if (jobId && !currentJob) {
+            setCurrentJob({
+                job_id: jobId,
+                status: 'fetching',
+                total_pages: 0,
+                translated_pages: 0,
+            });
+            setPolling(true);
+        }
+    }, [searchParams]);
 
     const fetchUserPoints = async () => {
         try {
@@ -139,6 +156,9 @@ export default function TranslatePage() {
                     total_pages: data.total_pages,
                     translated_pages: 0
                 });
+                
+                // Track in URL so user can return
+                router.replace(`?job_id=${data.job_id}`);
 
                 // Reset file
                 setFile(null);

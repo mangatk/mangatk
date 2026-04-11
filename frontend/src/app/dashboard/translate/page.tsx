@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     FaUpload, FaRobot, FaSave, FaSpinner, FaCheckCircle,
     FaExclamationTriangle, FaArrowRight
@@ -36,6 +36,7 @@ interface TranslationJob {
 
 export default function TranslatePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // Manga and Chapter Data
     const [allManga, setAllManga] = useState<Manga[]>([]);
@@ -72,6 +73,20 @@ export default function TranslatePage() {
     useEffect(() => {
         fetchManga();
     }, []);
+
+    // Resume from URL if exists
+    useEffect(() => {
+        const jobId = searchParams.get('job_id');
+        if (jobId && !currentJob) {
+            setCurrentJob({
+                job_id: jobId,
+                status: 'fetching',
+                total_pages: 0,
+                translated_pages: 0,
+            });
+            startPolling(jobId);
+        }
+    }, [searchParams]);
 
     const fetchManga = async () => {
         try {
@@ -211,6 +226,7 @@ export default function TranslatePage() {
                 });
 
                 // Start polling for status updates
+                router.replace(`?job_id=${data.job_id}`);
                 startPolling(data.job_id);
 
                 // Reset file and progress after a delay
@@ -660,9 +676,9 @@ export default function TranslatePage() {
                         </div>
                     </div>
 
-                    {/* Publish Button */}
-                    {currentJob && (
-                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+                    {/* Publish and Download Buttons */}
+                    {currentJob && currentJob.status === 'completed' && (
+                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-3">
                             <button
                                 onClick={handlePublish}
                                 disabled={publishing || !selectedManga || !chapterNumber}
@@ -676,10 +692,19 @@ export default function TranslatePage() {
                                 ) : (
                                     <>
                                         <FaSave />
-                                        حفظ الفصل المترجم
+                                        نشر الفصل المترجم
                                     </>
                                 )}
                             </button>
+
+                            <a
+                                href={`${API_URL}/translate/download/${currentJob.job_id}/`}
+                                download
+                                className="w-full text-center flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-lg transition-colors border border-gray-600 hover:border-gray-500"
+                            >
+                                <FaUpload className="rotate-180" /> {/* Download icon equivalent */}
+                                تحميل الفصل (CBZ)
+                            </a>
 
                             <button
                                 onClick={resetAll}
@@ -703,13 +728,39 @@ export default function TranslatePage() {
                         />
                     ) : (
                         <div className="bg-gray-800 rounded-xl border border-gray-700 p-12 flex flex-col items-center justify-center text-center">
-                            <FaRobot className="text-6xl text-gray-600 mb-4" />
-                            <h3 className="text-xl font-bold text-gray-400 mb-2">
-                                لا توجد معاينة بعد
-                            </h3>
-                            <p className="text-gray-500">
-                                قم برفع ملف فصل للبدء في الترجمة والمعاينة
-                            </p>
+                            {currentJob ? (
+                                <div className="w-full max-w-lg">
+                                    <FaRobot className="text-6xl text-blue-500 mb-6 mx-auto animate-pulse" />
+                                    <h3 className="text-xl font-bold text-gray-200 mb-4">
+                                        جاري ترجمة الفصل بواسطة الذكاء الاصطناعي...
+                                    </h3>
+                                    <div className="flex justify-between text-sm text-gray-400 mb-2 font-medium">
+                                        <span>تقدم عملية الترجمة:</span>
+                                        <span>{currentJob.translated_pages} / {currentJob.total_pages} صفحة</span>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden border border-gray-600">
+                                        <div 
+                                            className="bg-blue-500 h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-center text-[10px] text-white font-bold" 
+                                            style={{width: `${Math.max(2, (currentJob.translated_pages / Math.max(1, currentJob.total_pages)) * 100)}%`}}
+                                        >
+                                            {Math.round((currentJob.translated_pages / Math.max(1, currentJob.total_pages)) * 100)}%
+                                        </div>
+                                    </div>
+                                    <p className="text-gray-500 mt-6 text-sm">
+                                        يمكنك الخروج من هذه الصفحة، وسيتم إرسال إشعار لك فور الانتهاء!
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <FaRobot className="text-6xl text-gray-600 mb-4" />
+                                    <h3 className="text-xl font-bold text-gray-400 mb-2">
+                                        لا توجد معاينة بعد
+                                    </h3>
+                                    <p className="text-gray-500">
+                                        قم برفع ملف فصل للبدء في الترجمة والمعاينة
+                                    </p>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

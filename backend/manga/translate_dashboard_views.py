@@ -117,6 +117,12 @@ def upload_for_preview(request):
         job.status = 'translating'
         job.save()
 
+        def on_progress(current, total):
+            """Callback for real-time translation progress tracking"""
+            job.translated_pages = current
+            job.total_pages = total
+            job.save(update_fields=['translated_pages', 'total_pages'])
+
         def on_complete(translated_paths):
             logger.info(f"Translation completed for job {job.id}")
             translated_images_data = []
@@ -131,7 +137,34 @@ def upload_for_preview(request):
             job.translated_pages = len(translated_paths)
             job.status = 'completed'
             job.completed_at = timezone.now()
+            
+            # Create CBZ file for admin
+            try:
+                from .services.cbz_service import CBZService
+                cbz_output_dir = Path(settings.MEDIA_ROOT) / 'translated_cbz'
+                cbz_path = CBZService.create_cbz_from_local_files(
+                    translated_paths,
+                    cbz_output_dir,
+                    str(job.id)
+                )
+                job.output_file_path = cbz_path
+            except Exception as e:
+                logger.error(f"Failed to create Admin CBZ for job {job.id}: {e}")
+                
             job.save()
+            
+            # Send notification to Admin
+            try:
+                from .models import Notification
+                Notification.objects.create(
+                    user=job.user,
+                    title="اكتملت الترجمة (لوحة التحكم)",
+                    message="تم الانتهاء من ترجمة الفصل بنجاح. يمكنك مراجعته ونشره للعامة أو تحميله الآن.",
+                    link=f"/dashboard/translate?job_id={job.id}",
+                    notification_type='translation'
+                )
+            except Exception as ne:
+                logger.error(f"Failed to create admin notification: {ne}")
 
         def on_error(error_msg):
             logger.error(f"Translation error: {error_msg}")
@@ -142,6 +175,7 @@ def upload_for_preview(request):
         CustomTranslator.translate_chapter_async(
             job.temp_upload_path,
             str(translation_output_dir),
+            on_progress=on_progress,
             on_complete=on_complete,
             on_error=on_error
         )

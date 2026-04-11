@@ -995,7 +995,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        from django.utils import timezone
+        import datetime
+        one_hour_ago = timezone.now() - datetime.timedelta(hours=1)
+        
+        return Notification.objects.filter(user=self.request.user).exclude(
+            notification_type='translation', 
+            created_at__lt=one_hour_ago
+        )
         
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
