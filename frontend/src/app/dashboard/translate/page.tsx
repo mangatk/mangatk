@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     FaUpload, FaRobot, FaSave, FaSpinner, FaCheckCircle,
@@ -34,7 +34,7 @@ interface TranslationJob {
     error_message?: string;
 }
 
-export default function TranslatePage() {
+function TranslateContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -789,5 +789,18 @@ export default function TranslatePage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function TranslatePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col items-center justify-center h-96">
+                <FaSpinner className="animate-spin text-4xl text-blue-500 mb-4" />
+                <h2 className="text-xl font-bold text-gray-400">جاري التحميل...</h2>
+            </div>
+        }>
+            <TranslateContent />
+        </Suspense>
     );
 }

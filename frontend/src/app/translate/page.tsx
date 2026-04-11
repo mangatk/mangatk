@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaUpload, FaDownload, FaRobot, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import ChapterPreview, { ViewMode } from '@/components/ChapterPreview';
@@ -27,7 +27,7 @@ interface TranslationJob {
     original_filename?: string;
 }
 
-export default function TranslatePage() {
+function TranslateContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, isAuthenticated, token } = useAuth();
@@ -552,5 +552,18 @@ export default function TranslatePage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function TranslatePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col items-center justify-center">
+                <FaSpinner className="animate-spin text-4xl text-blue-500 mb-4" />
+                <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300">جاري التحميل...</h2>
+            </div>
+        }>
+            <TranslateContent />
+        </Suspense>
     );
 }
