@@ -481,6 +481,36 @@ function TranslateContent() {
             setPublishing(false);
         }
     };
+    const handleDownload = async () => {
+        if (!currentJob) return;
+        
+        try {
+            const token = localStorage.getItem('manga_token');
+            const res = await fetch(`${API_URL}/translate/download/${currentJob.job_id}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'فشل تحميل الملف');
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `translated_chapter_${currentJob.job_id}.cbz`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error: any) {
+            console.error('Download error:', error);
+            setError('حدث خطأ أثناء تحميل الملف. يُرجى المحاولة مرة أخرى.');
+        }
+    };
 
     const resetAll = () => {
         setCurrentJob(null);
@@ -697,14 +727,13 @@ function TranslateContent() {
                                 )}
                             </button>
 
-                            <a
-                                href={`${API_URL}/translate/download/${currentJob.job_id}/`}
-                                download
+                            <button
+                                onClick={handleDownload}
                                 className="w-full text-center flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-lg transition-colors border border-gray-600 hover:border-gray-500"
                             >
                                 <FaUpload className="rotate-180" /> {/* Download icon equivalent */}
                                 تحميل الفصل (CBZ)
-                            </a>
+                            </button>
 
                             <button
                                 onClick={resetAll}

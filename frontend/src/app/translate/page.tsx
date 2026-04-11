@@ -250,18 +250,34 @@ function TranslateContent() {
         }
     };
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         if (!currentJob || !token) return;
 
-        const downloadUrl = `${API_URL}/translate/download/${currentJob.job_id}/`;
+        try {
+            const res = await fetch(`${API_URL}/translate/download/${currentJob.job_id}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-        // Create temporary link and trigger download
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.setAttribute('Authorization', `Bearer ${token}`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || t('errDownload'));
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `translated_chapter_${currentJob.job_id}.cbz`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error: any) {
+            console.error('Download error:', error);
+            setError(error.message || t('errConnect'));
+        }
     };
 
     const handleReset = () => {
