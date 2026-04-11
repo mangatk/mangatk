@@ -46,7 +46,7 @@ image = (
         "manga-ocr",
         "easyocr",
         "simple-lama-inpainting",
-        "transformers",
+        "transformers[sentencepiece]>=4.40.0,<5.0.0",
         "sentencepiece",
         "protobuf<=5.29.3",
         "tiktoken",

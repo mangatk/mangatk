@@ -15,12 +15,14 @@ def download_models():
     # --- DEBUG: Verify dependencies ---
     try:
         import sentencepiece
-        print(f"DEBUG: sentencepiece imported successfully. Version: {getattr(sentencepiece, '__version__', 'unknown')}")
+        import transformers
+        print(f"DEBUG: sentencepiece version: {getattr(sentencepiece, '__version__', 'unknown')}")
+        print(f"DEBUG: transformers version: {transformers.__version__}")
+        transformers.utils.logging.set_verbosity_info()
     except Exception as e:
-        print(f"❌ DEBUG ERROR: sentencepiece import failed!")
+        print(f"❌ DEBUG ERROR during import check!")
         import traceback
         traceback.print_exc()
-        # Don't exit yet, let transformers try to load it too for more context
 
     import torch
 
