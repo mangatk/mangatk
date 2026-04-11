@@ -97,23 +97,14 @@ def upload_for_preview(request):
         job.status = 'translating'
         job.save()
         
-        # 3. Translate images using custom model
-        logger.info(f"Translating {len(extracted_images)} images for job {job.id}")
+        # 3. Start async translation
+        logger.info(f"Translating {len(extracted_images)} images for job {job.id} asynchronously")
         
         # Create output directory for translated images
         translation_output_dir = Path(settings.MEDIA_ROOT) / 'translations' / 'temp' / str(job.id) / 'translated'
         translation_output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Call custom translator
-        translated_image_paths = CustomTranslator.translate_chapter(
-            job.temp_upload_path,
-            str(translation_output_dir)
-        )
-        
-        job.translated_pages = len(translated_image_paths)
-        
-        # 4. Store paths for preview
-        # Original images paths (local)
+        # Store original images paths first
         original_images_data = []
         for idx, img_path in enumerate(extracted_images, 1):
             original_images_data.append({
@@ -122,32 +113,47 @@ def upload_for_preview(request):
                 'filename': os.path.basename(img_path)
             })
         
-        # Translated images paths (local)
-        translated_images_data = []
-        for idx, img_path in enumerate(translated_image_paths, 1):
-            translated_images_data.append({
-                'page_number': idx,
-                'local_path': str(img_path),
-                'filename': os.path.basename(img_path)
-            })
-        
-        # Save to job
         job.original_images_paths = original_images_data
-        job.translation_results = translated_images_data
-        job.status = 'completed'
-        job.completed_at = timezone.now()
+        job.status = 'translating'
         job.save()
+
+        def on_complete(translated_paths):
+            logger.info(f"Translation completed for job {job.id}")
+            translated_images_data = []
+            for idx, img_path in enumerate(translated_paths, 1):
+                translated_images_data.append({
+                    'page_number': idx,
+                    'local_path': str(img_path),
+                    'filename': os.path.basename(img_path)
+                })
+            
+            job.translation_results = translated_images_data
+            job.translated_pages = len(translated_paths)
+            job.status = 'completed'
+            job.completed_at = timezone.now()
+            job.save()
+
+        def on_error(error_msg):
+            logger.error(f"Translation error: {error_msg}")
+            job.status = 'failed'
+            job.error_message = error_msg
+            job.save()
+
+        CustomTranslator.translate_chapter_async(
+            job.temp_upload_path,
+            str(translation_output_dir),
+            on_complete=on_complete,
+            on_error=on_error
+        )
         
-        logger.info(f"Translation completed for job {job.id}")
-        
-        # Return URLs for preview (we'll serve them via Django)
+        # Return immediately for frontend polling
         return Response({
             'job_id': str(job.id),
             'status': job.status,
             'total_pages': job.total_pages,
-            'translated_pages': job.translated_pages,
-            'message': 'تمت الترجمة بنجاح! يمكنك الآن معاينة النتائج',
-        }, status=status.HTTP_200_OK)
+            'translated_pages': 0,
+            'message': 'بدأت عملية الترجمة... الرجاء الانتظار',
+        }, status=status.HTTP_202_ACCEPTED)
         
     except Exception as e:
         logger.error(f"Error in translation job {job.id}: {str(e)}")
