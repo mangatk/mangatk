@@ -45,6 +45,8 @@ image = (
         "simple-lama-inpainting",
         "transformers",
         "sentencepiece",
+        "protobuf",
+        "tiktoken",
         "opencv-python-headless",
         "numpy",
         "huggingface_hub",
