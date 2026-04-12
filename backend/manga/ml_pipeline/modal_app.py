@@ -24,8 +24,8 @@ except ImportError:
 # Import the download logic from our init script
 # Since Modal image build happens in its own environment, we include the script in the context
 TRANSLATION_MODEL_ID = os.environ.get(
-    "TRANSLATION_MODEL_ID",
-    "Helsinki-NLP/opus-mt-ja-ar"
+    "Bart2277/JPtoAR_transaltion_model_for_comics",
+    # "Helsinki-NLP/opus-mt-ja-ar"
 )
 try:
     from .modal_init import download_models
@@ -133,7 +133,8 @@ class TranslationPipeline:
         
         # 4. Translator
         print("  Loading translation model...")
-        self.translation_model_id = "Helsinki-NLP/opus-mt-ja-ar"
+        # self.translation_model_id = "Helsinki-NLP/opus-mt-ja-ar"
+        self.translation_model_id = "Bart2277/JPtoAR_transaltion_model_for_comics"
         self.tokenizer = AutoTokenizer.from_pretrained(self.translation_model_id, use_fast=False)
         self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(self.translation_model_id).to(self.device)
 

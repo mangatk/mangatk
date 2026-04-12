@@ -11,8 +11,8 @@ import os
 import io
 
 TRANSLATION_MODEL_ID = os.environ.get(
-    "TRANSLATION_MODEL_ID",
-    "Helsinki-NLP/opus-mt-ja-ar"
+    "Bart2277/JPtoAR_transaltion_model_for_comics",
+    # "Helsinki-NLP/opus-mt-ja-ar"
 )
 
 def download_models():
