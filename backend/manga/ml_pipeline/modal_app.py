@@ -24,6 +24,7 @@ except ImportError:
 # Import the download logic from our init script
 # Since Modal image build happens in its own environment, we include the script in the context
 TRANSLATION_MODEL_ID = os.environ.get(
+    "TRANSLATION_MODEL_ID",
     "Bart2277/JPtoAR_transaltion_model_for_comics",
     # "Helsinki-NLP/opus-mt-ja-ar"
 )
