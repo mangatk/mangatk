@@ -1231,8 +1231,8 @@ export default function ProfilePage() {
                         <div className="text-center md:text-right mt-2 md:mt-0">
                            <div className="flex flex-col gap-3">
                               {!editingName ? (
-                                 <div className="flex items-center gap-3 flex-wrap">
-                                    <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
+                                 <div className="flex justify-center md:justify-start items-center gap-3 flex-wrap">
+                                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-md text-center md:text-right">
                                        {t('welcomeUser')}{' '}
                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                                           {user.name}
@@ -1242,25 +1242,25 @@ export default function ProfilePage() {
                                     <button
                                        type="button"
                                        onClick={() => setEditingName(true)}
-                                       className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors"
+                                       className="p-2 rounded-lg bg-gray-700/80 hover:bg-gray-600 text-white transition-colors"
                                        title="تعديل الاسم"
                                     >
-                                       <FaEdit />
+                                       <FaEdit className="text-lg md:text-xl" />
                                     </button>
                                  </div>
                               ) : (
-                                 <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                                 <div className="flex flex-col md:flex-row gap-3 items-center md:items-start w-full max-w-full">
                                     <input
                                        type="text"
                                        value={displayName}
                                        onChange={(e) => setDisplayName(e.target.value)}
                                        placeholder="أدخل الاسم الجديد"
-                                       className="bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500 min-w-[260px]"
+                                       className="bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:border-blue-500 w-full max-w-[260px] md:min-w-[260px] md:w-auto text-center md:text-right"
                                        autoFocus
                                        maxLength={30}
                                     />
 
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 w-full md:w-auto justify-center">
                                        <button
                                           type="button"
                                           onClick={saveProfileName}
