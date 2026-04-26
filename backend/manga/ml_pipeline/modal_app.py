@@ -249,6 +249,7 @@ class TranslationPipeline:
         return Image.fromarray(img_cv)
 
     def _render_text(self, cleaned_img, boxes, translations, sentiments, language="ar"):
+        import re as _re
         np = self._np
         cv2 = self._cv2
         from PIL import Image, ImageDraw, ImageFont
@@ -345,12 +346,54 @@ class TranslationPipeline:
                 bb = draw.textbbox((0, 0), line, font=font, direction=direction, language=language)
                 cur_x = x1 + max(0, (box_w - (bb[2] - bb[0])) // 2)
 
-                for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)]:
-                    draw.text((cur_x + dx, cur_y + dy), line, font=font, fill=outline_color, direction=direction, language=language)
-                draw.text((cur_x, cur_y), line, font=font, fill=text_color, direction=direction, language=language)
-                cur_y += lh + line_spacing
+                # ✨ Special handling for punctuation-only lines (e.g. vertical dots)
+                if _re.fullmatch(r'^[.:]+$', line):
+                    dot_bbox = draw.textbbox((0, 0), ".", font=font, direction=direction, language=language)
+                    dot_h = dot_bbox[3] - dot_bbox[1]
+                    dot_w = dot_bbox[2] - dot_bbox[0]
+                    total_dots = len(line)
+                    total_punc_h = total_dots * dot_h + (total_dots - 1) * line_spacing // 2
+                    punc_cur_y = cur_y + (lh - total_punc_h) // 2
+                    for char in line:
+                        char_x = cur_x + (bb[2] - bb[0] - dot_w) // 2
+                        for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)]:
+                            draw.text((char_x + dx, punc_cur_y + dy), char, font=font, fill=outline_color, direction=direction, language=language)
+                        draw.text((char_x, punc_cur_y), char, font=font, fill=text_color, direction=direction, language=language)
+                        punc_cur_y += dot_h + line_spacing // 2
+                else:
+                    for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)]:
+                        draw.text((cur_x + dx, cur_y + dy), line, font=font, fill=outline_color, direction=direction, language=language)
+                    draw.text((cur_x, cur_y), line, font=font, fill=text_color, direction=direction, language=language)
+                    cur_y += lh + line_spacing
 
         return Image.alpha_composite(result, overlay).convert("RGB")
+
+    @staticmethod
+    def _remove_overlapping_boxes(boxes, overlap_threshold=0.5):
+        """✨ NMS: Remove smaller boxes heavily overlapped by larger ones."""
+        if len(boxes) == 0:
+            return boxes
+        keep = []
+        for i, box1 in enumerate(boxes):
+            x1_a, y1_a, x2_a, y2_a = box1
+            area1 = (x2_a - x1_a) * (y2_a - y1_a)
+            is_redundant = False
+            for j, box2 in enumerate(boxes):
+                if i == j:
+                    continue
+                x1_b, y1_b, x2_b, y2_b = box2
+                area2 = (x2_b - x1_b) * (y2_b - y1_b)
+                intersection = (
+                    max(0, min(x2_a, x2_b) - max(x1_a, x1_b)) *
+                    max(0, min(y2_a, y2_b) - max(y1_a, y1_b))
+                )
+                if intersection > 0 and (intersection / area1) > overlap_threshold and area2 >= area1:
+                    is_redundant = True
+                    break
+            if not is_redundant:
+                keep.append(box1)
+        import numpy as _np_static
+        return _np_static.array(keep)
 
     @modal.method()
     def translate_page(self, image_bytes: bytes, source_lang: str = "ja", target_lang: str = "ar") -> bytes:
@@ -359,11 +402,15 @@ class TranslationPipeline:
         from PIL import Image
 
         CROP_PADDING = 4
+        MASK_DILATION = 7
+
         image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_cv = np.array(image_pil)
 
-        results = self.yolo_model(img_cv, conf=0.25, verbose=False)
-        boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
+        # ✨ Use iou, agnostic_nms, then remove overlapping boxes
+        results = self.yolo_model(img_cv, conf=0.25, iou=0.4, agnostic_nms=True, verbose=False)
+        raw_boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
+        boxes = self._remove_overlapping_boxes(raw_boxes, overlap_threshold=0.4)
 
         if len(boxes) == 0:
             buf = io.BytesIO()
@@ -400,17 +447,45 @@ class TranslationPipeline:
             translations[i] = target_text
             sentiments[i] = self._get_sentiment(target_text)
 
-            text_detections = self.easyocr_reader.readtext(bubble_crop, paragraph=True, link_threshold=0.3, low_text=0.3)
-            for (bbox_pts, _text) in text_detections:
-                pts = np.array(bbox_pts, dtype=np.int32)
-                pts[:, 0] += px1
-                pts[:, 1] += py1
-                cv2.fillPoly(global_mask, [pts], 255)
-                cx, cy = int(np.mean(pts[:, 0])), int(np.mean(pts[:, 1]))
-                try:
-                    cv2.floodFill(global_mask, None, (cx, cy), 255, loDiff=10, upDiff=10, flags=cv2.FLOODFILL_FIXED_RANGE)
-                except Exception:
-                    pass
+            # ===============================================================
+            # ✨ THE ULTIMATE MASK FIX (ERASES ORIGINAL TEXT & PUNCTUATION)
+            # ===============================================================
+            bubble_crop_cv = bubble_crop
+            gray_crop = cv2.cvtColor(bubble_crop_cv, cv2.COLOR_RGB2GRAY)
+
+            # 1. Adapt threshold to bubble lightness (grab ALL ink)
+            if np.median(gray_crop) > 127:
+                _, binary_ink = cv2.threshold(gray_crop, 180, 255, cv2.THRESH_BINARY_INV)
+            else:
+                _, binary_ink = cv2.threshold(gray_crop, 75, 255, cv2.THRESH_BINARY)
+
+            # 2. EasyOCR box mask (safety net for known text regions)
+            ocr_box_mask = np.zeros_like(gray_crop)
+            for (bbox_pts, _text, _conf) in self.easyocr_reader.readtext(bubble_crop_cv, paragraph=False):
+                cv2.fillPoly(ocr_box_mask, [np.array(bbox_pts, dtype=np.int32)], 255)
+            ocr_box_mask = cv2.dilate(ocr_box_mask, np.ones((5, 5), np.uint8))
+            ocr_ink = cv2.bitwise_and(binary_ink, ocr_box_mask)
+
+            # 3. Flood-fill edges to isolate floating ink (dots, vertical punctuation)
+            h, w = binary_ink.shape
+            flood_mask = np.zeros((h + 2, w + 2), np.uint8)
+            floating_ink = binary_ink.copy()
+            for x in range(w):
+                if floating_ink[0, x] == 255:
+                    cv2.floodFill(floating_ink, flood_mask, (x, 0), 0)
+                if floating_ink[h - 1, x] == 255:
+                    cv2.floodFill(floating_ink, flood_mask, (x, h - 1), 0)
+            for y in range(h):
+                if floating_ink[y, 0] == 255:
+                    cv2.floodFill(floating_ink, flood_mask, (0, y), 0)
+                if floating_ink[y, w - 1] == 255:
+                    cv2.floodFill(floating_ink, flood_mask, (w - 1, y), 0)
+
+            # 4. Combine both masks
+            final_text_mask = cv2.bitwise_or(ocr_ink, floating_ink)
+            global_mask[py1:py2, px1:px2] = cv2.bitwise_or(
+                global_mask[py1:py2, px1:px2], final_text_mask
+            )
 
         cleaned = self._inpaint(image_pil, global_mask)
         final = self._render_text(cleaned, boxes, translations, sentiments, target_lang)

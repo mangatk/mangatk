@@ -41,7 +41,13 @@
       "expo-web-browser",
       "expo-image-picker",
       "@react-native-google-signin/google-signin",
-      "react-native-auth0"
+      [
+        "react-native-auth0",
+        {
+          "domain": "dev-n8idcwmwk1ubft3j.us.auth0.com",
+          "customScheme": "com.helmy001.manga_mobile_app"
+        }
+      ]
     ]
   }
 }
