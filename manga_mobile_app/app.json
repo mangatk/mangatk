@@ -2,7 +2,7 @@
   "expo": {
     "name": "MangaTK",
     "slug": "manga_mobile_app",
-    "scheme": "com.helmy001.manga_mobile_app",
+    "scheme": "mangatk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -47,7 +47,8 @@
           "domain": "dev-n8idcwmwk1ubft3j.us.auth0.com",
           "customScheme": "com.helmy001.manga_mobile_app"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

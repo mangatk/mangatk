@@ -209,14 +209,30 @@ class TranslationPipeline:
             with self._torch.no_grad():
                 tokens = self.translation_model.generate(
                     **inputs,
-                    max_new_tokens=256,
-                    num_beams=4
+                    num_beams=5,
+                    repetition_penalty=1.3,
+                    no_repeat_ngram_size=3,
+                    max_length=128,
+                    early_stopping=True,
+                    length_penalty=1.0
                 )
 
-            return self.tokenizer.decode(tokens[0], skip_special_tokens=True).strip()
+            result = self.tokenizer.decode(tokens[0], skip_special_tokens=True).strip()
+            return self._clean_translation(result)
         except Exception as e:
             print(f"Translation error: {e}")
             return "[Translation Error]"
+
+    def _clean_translation(self, text):
+        words = text.split()
+        if not words: return text
+        clean_words = [words[0]]
+        for word in words[1:]:
+            if word != clean_words[-1]:
+                clean_words.append(word)
+        cleaned_text = " ".join(clean_words)
+        cleaned_text = self._re.sub(r'(.)\1{4,}', r'\1\1', cleaned_text)
+        return cleaned_text
 
     def _get_sentiment(self, text):
         try:
@@ -233,8 +249,10 @@ class TranslationPipeline:
         if not np.any(mask):
             return image_pil.copy()
 
-        kernel = np.ones((7, 7), np.uint8)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
         dilated = cv2.dilate(mask, kernel, iterations=1)
+        dilated = cv2.GaussianBlur(dilated, (5, 5), 0)
+        _, dilated = cv2.threshold(dilated, 127, 255, cv2.THRESH_BINARY)
 
         if self.lama:
             try:
@@ -247,6 +265,15 @@ class TranslationPipeline:
         median_color = np.median(img_cv[dilated == 0], axis=0).astype(np.uint8)
         img_cv[dilated == 255] = median_color
         return Image.fromarray(img_cv)
+
+    def _build_outline_offsets(self, font):
+        thickness = max(1, font.size // 14)
+        offsets = []
+        for dx in range(-thickness, thickness + 1):
+            for dy in range(-thickness, thickness + 1):
+                if dx * dx + dy * dy <= thickness * thickness and (dx, dy) != (0, 0):
+                    offsets.append((dx, dy))
+        return offsets
 
     def _render_text(self, cleaned_img, boxes, translations, sentiments, language="ar"):
         import re as _re
@@ -281,8 +308,8 @@ class TranslationPipeline:
                 text_color = (139, 0, 0, 255) if sentiment == "negative" else (15, 15, 15, 255)
                 outline_color = (255, 255, 255, 255)
 
-            safe_w, safe_h = int(box_w * 0.65), int(box_h * 0.70)
-            start_size = min(int(box_w * 0.25), int(box_h * 0.25), 36)
+            safe_w, safe_h = int(box_w * 0.80), int(box_h * 0.85)
+            start_size = min(int(box_w * 0.30), int(box_h * 0.30), 48)
 
             font = None
             lines = [target_text]
@@ -304,7 +331,23 @@ class TranslationPipeline:
                     else:
                         if current:
                             test_lines.append(" ".join(current))
-                        current = [word]
+                            current = []
+                        word_bbox = draw.textbbox((0, 0), word, font=f, direction=direction, language=language)
+                        if word_bbox[2] - word_bbox[0] > safe_w and len(word) > 1:
+                            char_line = ""
+                            for char in word:
+                                test_char = char_line + char
+                                cb = draw.textbbox((0, 0), test_char, font=f, direction=direction, language=language)
+                                if cb[2] - cb[0] <= safe_w:
+                                    char_line = test_char
+                                else:
+                                    if char_line:
+                                        test_lines.append(char_line)
+                                    char_line = char
+                            if char_line:
+                                current = [char_line]
+                        else:
+                            current = [word]
                 if current:
                     test_lines.append(" ".join(current))
                 if not test_lines:
@@ -316,6 +359,8 @@ class TranslationPipeline:
                      draw.textbbox((0, 0), l, font=f, direction=direction, language=language)[1]) + ls
                     for l in test_lines
                 )
+                if test_lines: total_h -= ls
+
                 max_w = max(
                     draw.textbbox((0, 0), l, font=f, direction=direction, language=language)[2] -
                     draw.textbbox((0, 0), l, font=f, direction=direction, language=language)[0]
@@ -332,10 +377,9 @@ class TranslationPipeline:
                 except Exception:
                     font = ImageFont.load_default()
 
-            line_heights = []
-            for line in lines:
-                bb = draw.textbbox((0, 0), line, font=font, direction=direction, language=language)
-                line_heights.append((bb[3] - bb[1]) + line_spacing)
+            outline_offsets = self._build_outline_offsets(font)
+
+            line_heights = [(draw.textbbox((0, 0), l, font=font, direction=direction, language=language)[3] - draw.textbbox((0, 0), l, font=font, direction=direction, language=language)[1]) + line_spacing for l in lines]
             if line_heights:
                 line_heights[-1] -= line_spacing
 
@@ -346,7 +390,6 @@ class TranslationPipeline:
                 bb = draw.textbbox((0, 0), line, font=font, direction=direction, language=language)
                 cur_x = x1 + max(0, (box_w - (bb[2] - bb[0])) // 2)
 
-                # ✨ Special handling for punctuation-only lines (e.g. vertical dots)
                 if _re.fullmatch(r'^[.:]+$', line):
                     dot_bbox = draw.textbbox((0, 0), ".", font=font, direction=direction, language=language)
                     dot_h = dot_bbox[3] - dot_bbox[1]
@@ -356,15 +399,15 @@ class TranslationPipeline:
                     punc_cur_y = cur_y + (lh - total_punc_h) // 2
                     for char in line:
                         char_x = cur_x + (bb[2] - bb[0] - dot_w) // 2
-                        for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)]:
+                        for dx, dy in outline_offsets:
                             draw.text((char_x + dx, punc_cur_y + dy), char, font=font, fill=outline_color, direction=direction, language=language)
                         draw.text((char_x, punc_cur_y), char, font=font, fill=text_color, direction=direction, language=language)
                         punc_cur_y += dot_h + line_spacing // 2
                 else:
-                    for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)]:
+                    for dx, dy in outline_offsets:
                         draw.text((cur_x + dx, cur_y + dy), line, font=font, fill=outline_color, direction=direction, language=language)
                     draw.text((cur_x, cur_y), line, font=font, fill=text_color, direction=direction, language=language)
-                    cur_y += lh + line_spacing
+                    cur_y += lh
 
         return Image.alpha_composite(result, overlay).convert("RGB")
 
@@ -395,6 +438,40 @@ class TranslationPipeline:
         import numpy as _np_static
         return _np_static.array(keep)
 
+    @staticmethod
+    def _filter_detections(boxes, min_area=400, max_ar=6.0):
+        if len(boxes) == 0: return boxes
+        import numpy as _np_static
+        filtered = []
+        for box in boxes:
+            x1, y1, x2, y2 = box
+            w, h = x2 - x1, y2 - y1
+            area = w * h
+            ar = max(w, h) / max(min(w, h), 1)
+            if area >= min_area and ar <= max_ar:
+                filtered.append(box)
+        return _np_static.array(filtered) if filtered else _np_static.array([]).reshape(0, 4)
+
+    @staticmethod
+    def _sort_boxes_manga_order(boxes):
+        if len(boxes) == 0: return boxes
+        page_h = max(b[3] for b in boxes)
+        row_threshold = page_h * 0.15
+        sorted_boxes = sorted(boxes, key=lambda b: b[1])
+        rows, current_row = [], [sorted_boxes[0]]
+        for box in sorted_boxes[1:]:
+            if abs(box[1] - current_row[0][1]) < row_threshold:
+                current_row.append(box)
+            else:
+                rows.append(current_row)
+                current_row = [box]
+        rows.append(current_row)
+        ordered = []
+        for row in rows:
+            row.sort(key=lambda b: -b[0])
+            ordered.extend(row)
+        return ordered
+
     @modal.method()
     def translate_page(self, image_bytes: bytes, source_lang: str = "ja", target_lang: str = "ar") -> bytes:
         np = self._np
@@ -407,10 +484,12 @@ class TranslationPipeline:
         image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_cv = np.array(image_pil)
 
-        # ✨ Use iou, agnostic_nms, then remove overlapping boxes
         results = self.yolo_model(img_cv, conf=0.25, iou=0.4, agnostic_nms=True, verbose=False)
         raw_boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
         boxes = self._remove_overlapping_boxes(raw_boxes, overlap_threshold=0.4)
+        boxes = self._filter_detections(boxes)
+        if len(boxes) > 0:
+            boxes = self._sort_boxes_manga_order(boxes)
 
         if len(boxes) == 0:
             buf = io.BytesIO()
@@ -453,11 +532,16 @@ class TranslationPipeline:
             bubble_crop_cv = bubble_crop
             gray_crop = cv2.cvtColor(bubble_crop_cv, cv2.COLOR_RGB2GRAY)
 
-            # 1. Adapt threshold to bubble lightness (grab ALL ink)
+            # 1. Adaptive Otsu thresholding
+            blurred = cv2.GaussianBlur(gray_crop, (3, 3), 0)
             if np.median(gray_crop) > 127:
-                _, binary_ink = cv2.threshold(gray_crop, 180, 255, cv2.THRESH_BINARY_INV)
+                _, binary_ink = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
             else:
-                _, binary_ink = cv2.threshold(gray_crop, 75, 255, cv2.THRESH_BINARY)
+                _, binary_ink = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+            # Morphological noise cleanup
+            clean_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+            binary_ink = cv2.morphologyEx(binary_ink, cv2.MORPH_OPEN, clean_kernel)
 
             # 2. EasyOCR box mask (safety net for known text regions)
             ocr_box_mask = np.zeros_like(gray_crop)
